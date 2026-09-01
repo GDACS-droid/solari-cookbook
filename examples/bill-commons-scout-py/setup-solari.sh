@@ -6,6 +6,17 @@ example_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(git -C "$example_dir" rev-parse --show-toplevel)"
 env_file="$example_dir/.env.local"
 relative_path="${env_file#"$repo_root"/}"
+temp_file=""
+solari_key=""
+
+cleanup_secret() {
+  if [[ -n "$temp_file" && -f "$temp_file" ]]; then
+    rm -f -- "$temp_file"
+  fi
+  unset solari_key
+}
+trap cleanup_secret EXIT
+trap 'exit 130' HUP INT TERM
 
 if git -C "$repo_root" ls-files --error-unmatch -- "$relative_path" >/dev/null 2>&1; then
   printf '%s\n' "Refusing to overwrite a tracked file." >&2
@@ -32,5 +43,6 @@ fi
 printf 'SOLARI_API_KEY=%s\n' "$solari_key" >> "$temp_file"
 chmod 600 "$temp_file"
 mv "$temp_file" "$env_file"
+temp_file=""
 unset solari_key
 printf '%s\n' "Saved SOLARI_API_KEY to ignored .env.local."

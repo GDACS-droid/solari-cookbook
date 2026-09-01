@@ -1,10 +1,11 @@
 """Bill Commons Scout's bounded, evidence-first Solari example.
 
 ``python main.py`` is a free deterministic contract test. ``--live`` opens the
-Florida Senate's bill-category page in one recorded Solari browser session, uses
-browser interactions to inspect amendment and analysis tabs, and releases the
-remote session on every path. The command emits no secret, session identifier,
-browser capability URL, cookie, or replay URL.
+Florida Legislature's Online Sunshine statute portal in one recorded Solari
+browser session, navigates from chapter 43 to section 43.16, verifies current-law
+language and its chapter-law history, and releases every identified remote session.
+The command emits no secret, session identifier, browser capability URL, cookie,
+or replay URL.
 """
 from __future__ import annotations
 
@@ -17,26 +18,34 @@ import os
 import re
 import time
 from dataclasses import asdict, dataclass
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Protocol
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qs, urlsplit, urlunsplit
 
-OFFICIAL_HOSTS = frozenset({"flsenate.gov", "www.flsenate.gov"})
-TARGET = "https://www.flsenate.gov/Session/Bill/2026/625/ByCategory"
+OFFICIAL_HOSTS = frozenset({"leg.state.fl.us", "www.leg.state.fl.us"})
+TARGET = (
+    "https://www.leg.state.fl.us/statutes/index.cfm?"
+    "App_mode=Display_Statute&URL=0000-0099%2F0043%2F0043ContentsIndex.html"
+)
+SECTION_URL = (
+    "https://www.leg.state.fl.us/statutes/index.cfm?"
+    "App_mode=Display_Statute&URL=0000-0099%2F0043%2FSections%2F0043.16.html"
+)
 MAX_DOCUMENT_BYTES = 256 * 1024
 MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024
 MAX_PAGES = 1
-MAX_ACTIONS = 3
-MAX_ROUTED_REQUESTS = 32
+MAX_ACTIONS = 2
+MAX_ROUTED_REQUESTS = 48
 WALL_SECONDS = 45
 ACTION_SECONDS = 10
 CLEANUP_SECONDS = 10
 LOCAL_ENV_PATH = Path(__file__).with_name(".env.local")
-ARTIFACT_PATH = Path(__file__).parent / "artifacts/live/florida-senate-hb625.png"
+ARTIFACT_PATH = Path(__file__).parent / "artifacts/live/florida-statute-43-16.png"
 
 
 def admit_official_url(value: str) -> str:
-    """Canonicalize a single public Florida Senate HTTPS URL, or reject it."""
+    """Canonicalize a single public Florida Legislature HTTPS URL, or reject it."""
     parsed = urlsplit(value)
     host = (parsed.hostname or "").rstrip(".").lower()
     if (
@@ -48,6 +57,22 @@ def admit_official_url(value: str) -> str:
     ):
         raise ValueError("source_not_admitted")
     return urlunsplit(("https", host, parsed.path or "/", parsed.query, ""))
+
+
+def admit_section_url(value: str) -> str:
+    """Require the exact Online Sunshine route for current section 43.16."""
+    canonical = admit_official_url(value)
+    parsed = urlsplit(canonical)
+    if parsed.path.casefold() != "/statutes/index.cfm":
+        raise ValueError("unexpected_final_url")
+    query = parse_qs(parsed.query, keep_blank_values=True)
+    if query.get("App_mode") != ["Display_Statute"] or query.get("URL") != [
+        "0000-0099/0043/Sections/0043.16.html"
+    ]:
+        raise ValueError("unexpected_final_url")
+    if set(query) - {"App_mode", "Search_String", "URL"}:
+        raise ValueError("unexpected_final_url")
+    return canonical
 
 
 def load_local_env_value(path: Path, key: str) -> str | None:
@@ -83,10 +108,6 @@ def clean_text(value: str) -> str:
     return " ".join(html.unescape(value).split())
 
 
-def table_cells(row: str) -> list[str]:
-    return [clean_text(cell) for cell in re.findall(r"<td\b[^>]*>(.*?)</td>", row, re.I | re.S)]
-
-
 @dataclass(frozen=True)
 class OfficialArtifact:
     kind: str
@@ -108,7 +129,6 @@ class Capture:
     pages: int = 0
     actions: int = 0
     routed_requests: int = 0
-    session_fingerprint: str | None = None
     replay_available: bool = False
     cleanup_confirmed: bool = False
     screenshot: str | None = None
@@ -121,50 +141,167 @@ class CleanupOutcome:
     errors: tuple[str, ...]
 
 
-def extract_official_artifacts(page_html: str, base_url: str) -> tuple[OfficialArtifact, ...]:
-    """Extract only explicit first-party amendment and analysis links from the page."""
-    base = admit_official_url(base_url)
-    artifacts: list[OfficialArtifact] = []
-    for row in re.findall(r"<tr\b[^>]*>(.*?)</tr>", page_html, re.I | re.S):
-        cells = table_cells(row)
-        hrefs = re.findall(r"href\s*=\s*[\"']?([^\"'\s>]+)", row, re.I)
-        for href in hrefs:
-            candidate = urljoin(base, html.unescape(href))
-            candidate_path = urlsplit(candidate).path
-            amendment = re.search(r"/Amendment/(\d+)/HTML$", candidate_path, re.I)
-            if amendment and cells:
-                absolute = admit_official_url(candidate)
-                identifier = amendment.group(1)
-                artifacts.append(
-                    OfficialArtifact(
-                        kind="amendment",
-                        identifier=identifier,
-                        title=f"Amendment {identifier}",
-                        source_url=absolute,
-                        detail=cells[0],
-                        published_at=cells[2] if len(cells) > 2 else "",
-                    )
+class LiveBrowserError(RuntimeError):
+    """Fixed-shape public diagnostic; never retains SDK exception text."""
+
+    def __init__(self, phase: str, reason: str, *, cleanup_confirmed: bool) -> None:
+        self.phase = phase if phase in {"create", "connect", "navigate", "interact", "extract"} else "unknown"
+        self.reason = reason if reason in {
+            "timeout", "connection_reset", "dns", "browser_closed", "net_failed", "unexpected"
+        } else "unexpected"
+        self.cleanup_confirmed = cleanup_confirmed
+        super().__init__(f"live_browser_{self.phase}_{self.reason}")
+
+
+def live_failure_reason(error: BaseException) -> str:
+    """Map transport text to our enum without returning the original text."""
+    if isinstance(error, (asyncio.TimeoutError, TimeoutError)):
+        return "timeout"
+    message = str(error)
+    markers = (
+        ("ERR_CONNECTION_RESET", "connection_reset"),
+        ("ERR_NAME_NOT_RESOLVED", "dns"),
+        ("Target page, context or browser has been closed", "browser_closed"),
+        ("ERR_FAILED", "net_failed"),
+    )
+    return next((reason for marker, reason in markers if marker in message), "unexpected")
+
+
+@dataclass(frozen=True)
+class _ParsedSection:
+    number: str
+    catchline: str
+    paragraphs: tuple[str, ...]
+    history: str
+
+
+class _StatuteSectionParser(HTMLParser):
+    """Bind fields to each actual ``div.Section`` instead of page-wide text."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.depth = 0
+        self.section_depth: int | None = None
+        self.captures: list[tuple[str, int, list[str]]] = []
+        self.number = ""
+        self.catchline = ""
+        self.paragraphs: list[str] = []
+        self.history = ""
+        self.sections: list[_ParsedSection] = []
+
+    @staticmethod
+    def _classes(attrs: list[tuple[str, str | None]]) -> set[str]:
+        return {
+            value
+            for name, raw in attrs
+            if name.casefold() == "class" and raw
+            for value in raw.split()
+        }
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.depth += 1
+        classes = self._classes(attrs)
+        if tag.casefold() == "div" and "Section" in classes and self.section_depth is None:
+            self.section_depth = self.depth
+            self.number = self.catchline = self.history = ""
+            self.paragraphs = []
+            self.captures = []
+            return
+        if self.section_depth is None:
+            return
+        for _, _, values in self.captures:
+            values.append(" ")
+        kind = next(
+            (
+                value
+                for value, marker in (
+                    ("number", "SectionNumber"),
+                    ("catchline", "CatchlineText"),
+                    ("paragraph", "Paragraph"),
+                    ("history", "HistoryText"),
                 )
-                break
-            analysis = re.search(r"/Analyses/([^/]+\.PDF)$", candidate_path, re.I)
-            if analysis and len(cells) >= 4:
-                absolute = admit_official_url(candidate)
-                identifier = analysis.group(1)
-                artifacts.append(
-                    OfficialArtifact(
-                        kind="bill_analysis",
-                        identifier=identifier,
-                        title=f"Bill analysis — {cells[2]}",
-                        source_url=absolute,
-                        detail=cells[1],
-                        published_at=cells[3],
-                    )
+                if marker in classes
+            ),
+            None,
+        )
+        if kind:
+            self.captures.append((kind, self.depth, []))
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        self.handle_endtag(tag)
+
+    def handle_data(self, data: str) -> None:
+        for _, _, values in self.captures:
+            values.append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        finishing = [capture for capture in self.captures if capture[1] == self.depth]
+        for kind, _, values in finishing:
+            value = " ".join("".join(values).split())
+            if kind == "number":
+                self.number = value
+            elif kind == "catchline":
+                self.catchline = value
+            elif kind == "paragraph":
+                self.paragraphs.append(value)
+            elif kind == "history":
+                self.history = value
+            self.captures.remove((kind, self.depth, values))
+        if self.section_depth == self.depth:
+            self.sections.append(
+                _ParsedSection(
+                    number=self.number,
+                    catchline=self.catchline,
+                    paragraphs=tuple(self.paragraphs),
+                    history=self.history,
                 )
-                break
-    deduped: dict[tuple[str, str], OfficialArtifact] = {
-        (artifact.kind, artifact.identifier): artifact for artifact in artifacts
-    }
-    return tuple(deduped.values())
+            )
+            self.section_depth = None
+            self.captures = []
+        self.depth = max(0, self.depth - 1)
+
+
+def extract_official_artifacts(page_html: str, source_url: str) -> tuple[OfficialArtifact, ...]:
+    """Extract exact current-law evidence from one scoped section 43.16 record."""
+    try:
+        canonical = admit_section_url(source_url)
+    except ValueError:
+        return ()
+    parser = _StatuteSectionParser()
+    try:
+        parser.feed(page_html)
+        parser.close()
+    except Exception:
+        return ()
+    matches = [section for section in parser.sections if section.number == "43.16"]
+    if len(matches) != 1:
+        return ()
+    section = matches[0]
+    detail = next(
+        (
+            paragraph
+            for paragraph in section.paragraphs
+            if "One judge, or senior judge serving on a court" in paragraph
+        ),
+        "",
+    )
+    if (
+        "Justice Administrative Commission" not in section.catchline
+        or not detail
+        or "2026-141" not in section.history
+    ):
+        return ()
+    return (
+        OfficialArtifact(
+            kind="statute_section",
+            identifier="43.16",
+            title=section.catchline,
+            source_url=canonical,
+            detail=detail,
+            published_at="s. 1, ch. 2026-141",
+        ),
+    )
 
 
 def make_capture(
@@ -177,7 +314,6 @@ def make_capture(
     pages: int = 0,
     actions: int = 0,
     routed_requests: int = 0,
-    session_fingerprint: str | None = None,
     replay_available: bool = False,
     cleanup_confirmed: bool = False,
     screenshot: str | None = None,
@@ -186,10 +322,8 @@ def make_capture(
     if len(encoded) > MAX_DOCUMENT_BYTES:
         raise ValueError("source_too_large")
     artifacts = extract_official_artifacts(page_html, url)
-    if not any(item.kind == "amendment" and item.identifier == "154926" for item in artifacts):
-        raise RuntimeError("expected_amendment_not_found")
-    if not any(item.kind == "bill_analysis" for item in artifacts):
-        raise RuntimeError("expected_analysis_not_found")
+    if not any(item.kind == "statute_section" and item.identifier == "43.16" for item in artifacts):
+        raise RuntimeError("expected_statute_evidence_not_found")
     return Capture(
         url=admit_official_url(url),
         title=" ".join(title.split())[:160],
@@ -200,7 +334,6 @@ def make_capture(
         pages=pages,
         actions=actions,
         routed_requests=routed_requests,
-        session_fingerprint=session_fingerprint,
         replay_available=replay_available,
         cleanup_confirmed=cleanup_confirmed,
         screenshot=screenshot,
@@ -208,13 +341,12 @@ def make_capture(
 
 
 FIXTURE_HTML = """
-<main><h1>Fixture only: Florida Senate bill-category page shape</h1>
-<table><tr><td>154926 - Amendment<br>Delete lines 27 - 28 and insert:</td>
-<td>Bradley</td><td>3/4/2026 7:25 PM</td><td>House: Concur</td>
-<td><a href=/Session/Bill/2026/625/Amendment/154926/HTML>Web Page</a></td></tr></table>
-<table><tr><td>Bill Analysis</td><td>H 625</td><td>Judiciary Committee (Post-Meeting)</td>
-<td>2/3/2026 3:02 PM</td><td><a href=/Session/Bill/2026/625/Analyses/h0625c.JDC.PDF>PDF</a></td></tr></table>
-</main>
+<main><div class="Section">
+<span class="SectionNumber">43.16&#x2003;</span>
+<span class="Catchline"><span class="CatchlineText">Justice Administrative Commission; membership, powers and duties.</span></span>
+<div class="Paragraph"><span class="Number">(d)</span><span class="Text">One judge, or senior judge serving on a court, to be appointed by the Chief Justice of the Supreme Court.</span></div>
+<div class="History"><span class="HistoryText">ss. 1-6, ch. 65-328; s. 1, ch. 2026-141.</span></div>
+</div></main>
 """
 
 
@@ -227,50 +359,77 @@ class FixtureResearchBrowserProvider:
 
     async def capture(self, url: str) -> Capture:
         return make_capture(
-            url,
+            SECTION_URL,
             FIXTURE_HTML,
-            title="Fixture only — Florida Senate bill-category page shape",
+            title="Fixture only — Florida Statutes section 43.16",
             mechanism="fixture",
         )
 
 
-async def cleanup_live_resources(*, solari, browser, playwright, session_id: str | None) -> CleanupOutcome:
-    """Close local and remote resources in order, without short-circuiting cleanup."""
+async def cleanup_live_resources(
+    *,
+    solari,
+    browser,
+    playwright,
+    session_id: str | None,
+    create_outcome_ambiguous: bool = False,
+) -> CleanupOutcome:
+    """Release paid capacity first, within one total cleanup deadline."""
     errors: list[str] = []
     released = replay_available = False
-    if browser is not None:
+    deadline = time.monotonic() + CLEANUP_SECONDS
+
+    async def bounded(awaitable, error_code: str) -> bool:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            close = getattr(awaitable, "close", None)
+            if close is not None:
+                close()
+            errors.append(error_code)
+            return False
         try:
-            await asyncio.wait_for(browser.close(), CLEANUP_SECONDS)
+            await asyncio.wait_for(awaitable, remaining)
+            return True
         except Exception:
-            errors.append("browser_close_failed")
-    if playwright is not None:
-        try:
-            await asyncio.wait_for(playwright.stop(), CLEANUP_SECONDS)
-        except Exception:
-            errors.append("playwright_stop_failed")
+            errors.append(error_code)
+            return False
+
+    # Remote release is the spend boundary. Local teardown must not consume
+    # its deadline or leave the billable session open after a close hang.
     if session_id is not None:
-        try:
-            await asyncio.wait_for(solari.sessions.release_and_wait(session_id), CLEANUP_SECONDS)
-            released = True
-        except Exception:
-            errors.append("remote_release_failed")
+        released = await bounded(
+            solari.sessions.release_and_wait(session_id), "remote_release_failed"
+        )
+    if browser is not None:
+        await bounded(browser.close(), "browser_close_failed")
+    if playwright is not None:
+        await bounded(playwright.stop(), "playwright_stop_failed")
+    if session_id is not None:
         if released:
-            deadline = time.monotonic() + CLEANUP_SECONDS - 1
-            while time.monotonic() < deadline:
+            while time.monotonic() < deadline - 0.25:
                 try:
-                    await asyncio.wait_for(solari.sessions.get_replay_url(session_id), timeout=1)
+                    await asyncio.wait_for(
+                        solari.sessions.get_replay_url(session_id),
+                        timeout=min(1, max(0.1, deadline - time.monotonic())),
+                    )
                     replay_available = True
                     break
                 except Exception:
-                    await asyncio.sleep(0.5)
-    try:
-        await asyncio.wait_for(solari.close(), CLEANUP_SECONDS)
-    except Exception:
-        errors.append("client_close_failed")
+                    await asyncio.sleep(min(0.5, max(0, deadline - time.monotonic())))
+    await bounded(solari.close(), "client_close_failed")
     return CleanupOutcome(
-        confirmed=session_id is None or released,
+        confirmed=released if session_id is not None else not create_outcome_ambiguous,
         replay_available=replay_available,
         errors=tuple(errors),
+    )
+
+
+def make_solari_client(factory, api_key: str):
+    """Disable non-idempotent create retries; the SDK has no idempotency key."""
+    return factory(
+        api_key=api_key,
+        max_attempts=1,
+        timeout_ms=WALL_SECONDS * 1000,
     )
 
 
@@ -289,18 +448,24 @@ class SolariResearchBrowserProvider:
             raise RuntimeError("missing_live_dependencies") from exc
 
         started = time.monotonic()
-        solari = Solari(api_key=api_key, timeout_ms=WALL_SECONDS * 1000)
+        solari = make_solari_client(Solari, api_key)
         session_id: str | None = None
+        create_attempted = False
         playwright = browser = page = None
         page_html = ""
-        page_title = "Florida Senate bill-category page"
+        page_title = "Florida Statutes section 43.16"
         pages = actions = routed_requests = 0
         replay_available = cleanup_confirmed = False
         screenshot: str | None = None
+        phase = "create"
+        drive_error: BaseException | None = None
+        cancelled_error: asyncio.CancelledError | None = None
         try:
             async with asyncio.timeout(WALL_SECONDS):
+                create_attempted = True
                 session = await solari.sessions.create(recording=True)
-                session_id = str(session.id)  # used privately for cleanup/fingerprint only
+                session_id = str(session.id)  # used privately for cleanup only
+                phase = "connect"
                 playwright = await async_playwright().start()
                 browser = await playwright.chromium.connect(session.ws_endpoint)
                 page = await browser.new_page()
@@ -321,16 +486,21 @@ class SolariResearchBrowserProvider:
                         await route.continue_()
 
                 await page.route("**/*", admit_route)
-                await page.goto(canonical, timeout=ACTION_SECONDS * 1000, wait_until="domcontentloaded")
-                await page.wait_for_selector("#optionAmendments")
-                await page.locator("#optionAmendments").click()
+                phase = "navigate"
+                await page.goto(canonical, timeout=ACTION_SECONDS * 1000, wait_until="commit")
                 actions += 1
-                await page.wait_for_selector("#FloorAmendment:visible")
-                await page.locator("#optionAnalyses").click()
+                phase = "interact"
+                section_link = page.get_by_role("link", name="43.16", exact=True)
+                await section_link.wait_for(state="visible")
+                async with page.expect_navigation(
+                    wait_until="commit", timeout=ACTION_SECONDS * 1000
+                ):
+                    await section_link.click()
                 actions += 1
-                await page.wait_for_selector("#tabBodyAnalyses:visible")
+                await page.locator(".CatchlineText").wait_for(state="visible")
                 if actions > MAX_ACTIONS or pages > MAX_PAGES:
                     raise RuntimeError("browser_budget_exceeded")
+                phase = "extract"
                 page_title = await page.title()
                 page_html = await page.content()
                 if len(page_html.encode("utf-8")) > MAX_DOCUMENT_BYTES:
@@ -340,18 +510,32 @@ class SolariResearchBrowserProvider:
                 if ARTIFACT_PATH.stat().st_size > MAX_SCREENSHOT_BYTES:
                     raise RuntimeError("screenshot_too_large")
                 screenshot = str(ARTIFACT_PATH.relative_to(Path(__file__).parent))
-                admit_official_url(page.url)
+                final_url = admit_section_url(page.url)
+        except asyncio.CancelledError as error:
+            cancelled_error = error
+        except Exception as error:
+            drive_error = error
         finally:
             cleanup = await cleanup_live_resources(
-                solari=solari, browser=browser, playwright=playwright, session_id=session_id
+                solari=solari,
+                browser=browser,
+                playwright=playwright,
+                session_id=session_id,
+                create_outcome_ambiguous=create_attempted and session_id is None,
             )
             cleanup_confirmed = cleanup.confirmed
             replay_available = cleanup.replay_available
+        if cancelled_error is not None:
+            raise cancelled_error
+        if drive_error is not None:
+            raise LiveBrowserError(
+                phase, live_failure_reason(drive_error), cleanup_confirmed=cleanup_confirmed
+            ) from None
         if cleanup.errors or not cleanup_confirmed:
             raise RuntimeError("remote_cleanup_failed")
 
         return make_capture(
-            canonical,
+            final_url,
             page_html,
             title=page_title,
             mechanism="solari_browser",
@@ -359,7 +543,6 @@ class SolariResearchBrowserProvider:
             pages=pages,
             actions=actions,
             routed_requests=routed_requests,
-            session_fingerprint=hashlib.sha256(session_id.encode()).hexdigest()[:12],
             replay_available=replay_available,
             cleanup_confirmed=cleanup_confirmed,
             screenshot=screenshot,
@@ -371,8 +554,10 @@ def public_error_code(error: Exception) -> str:
     known = {
         "missing_solari_api_key", "missing_live_dependencies", "source_not_admitted",
         "source_too_large", "screenshot_too_large", "browser_budget_exceeded",
-        "expected_amendment_not_found", "expected_analysis_not_found", "remote_cleanup_failed",
+        "expected_statute_evidence_not_found", "remote_cleanup_failed",
     }
+    if isinstance(error, LiveBrowserError):
+        return str(error)
     return str(error) if str(error) in known else "live_browser_failed"
 
 
@@ -384,7 +569,10 @@ async def main() -> int:
     try:
         result = await provider.capture(TARGET)
     except Exception as error:
-        print(json.dumps({"ok": False, "error": public_error_code(error)}))
+        payload = {"ok": False, "error": public_error_code(error)}
+        if isinstance(error, LiveBrowserError):
+            payload["cleanup_confirmed"] = error.cleanup_confirmed
+        print(json.dumps(payload))
         return 1
     print(json.dumps({"ok": True, "capture": asdict(result)}, indent=2))
     return 0
