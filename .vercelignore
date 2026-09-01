@@ -15,8 +15,6 @@ artifacts/replays/
 # Repository-only research, fixtures, and media are not runtime inputs.
 assets/
 data/
-!data/event_observations/
-!data/event_observations/official_demo_observations.json
 docs/
 e2e/
 examples/

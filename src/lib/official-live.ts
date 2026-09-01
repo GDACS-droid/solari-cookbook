@@ -3,7 +3,7 @@ import { z } from "zod"
 import { ADAPTER_VERSION, fingerprintEvent, normalizeAddress, scoreOpportunity, stableId, type Evidence, type OpportunityScore, type PropertyEvent, type PropertyGraph } from "@/lib/acrebrief"
 import { assertApprovedNavigation, type InvestigationInput, type InvestigationUpdate } from "@/lib/investigation"
 import { sourcePolicyAllows, sourceRequestBudget, type RuntimeSourceId } from "@/lib/source-policy"
-import officialDemoObservations from "../../data/event_observations/official_demo_observations.json"
+import officialDemoObservations from "../data/event_observations/official_demo_observations.json"
 
 const DOR_SOURCE_ID = "florida_dor_property_tax_data" as const
 const CITY_SOURCE_ID = "cape_coral_open_data_utility_liens" as const
