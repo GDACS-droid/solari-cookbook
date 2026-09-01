@@ -15,15 +15,19 @@ Result: **pass**.
 | Extracted section | `43.16` |
 | Current-law text | “One judge, or senior judge serving on a court …” |
 | Official history | `s. 1, ch. 2026-141` |
-| Browser runtime | 9.584 seconds |
+| Browser runtime | 10.137 seconds |
 | Pages | 1 |
 | Actions | 2 |
 | Routed requests | 38 of 48 maximum |
 | Recording/replay capability | available |
 | Remote cleanup | confirmed |
 
-The post-hardening run produced the committed [sanitized screenshot](artifacts/live/florida-statute-43-16.png)
-of the public Florida Legislature page. It contains no account data or browser controls.
+The post-hardening run produced two committed sanitized screenshots from the
+same browser session: [chapter 43 before the click](artifacts/live/florida-statutes-chapter-43.png)
+and [section 43.16 after navigation](artifacts/live/florida-statute-43-16.png).
+They contain no account data or browser controls. Their SHA-256 values are
+`7c91920fa2b7f1e398468fcef533a0964baab1cb092eae76100ff446e568005e`
+and `23a1c251cc3ceaf75ed035a763f5cfcaee4f769bd62a75e6bb3a4f42a83cfd3b`.
 
 The raw session identifier, connection endpoint, replay URL, cookies, and credentials
 were neither printed nor retained in this proof. The replay URL is intentionally omitted

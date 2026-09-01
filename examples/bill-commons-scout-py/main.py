@@ -42,6 +42,9 @@ ACTION_SECONDS = 10
 CLEANUP_SECONDS = 10
 LOCAL_ENV_PATH = Path(__file__).with_name(".env.local")
 ARTIFACT_PATH = Path(__file__).parent / "artifacts/live/florida-statute-43-16.png"
+NAVIGATION_ARTIFACT_PATH = (
+    Path(__file__).parent / "artifacts/live/florida-statutes-chapter-43.png"
+)
 
 
 def admit_official_url(value: str) -> str:
@@ -131,6 +134,7 @@ class Capture:
     routed_requests: int = 0
     replay_available: bool = False
     cleanup_confirmed: bool = False
+    navigation_screenshot: str | None = None
     screenshot: str | None = None
 
 
@@ -316,6 +320,7 @@ def make_capture(
     routed_requests: int = 0,
     replay_available: bool = False,
     cleanup_confirmed: bool = False,
+    navigation_screenshot: str | None = None,
     screenshot: str | None = None,
 ) -> Capture:
     encoded = page_html.encode("utf-8")
@@ -336,6 +341,7 @@ def make_capture(
         routed_requests=routed_requests,
         replay_available=replay_available,
         cleanup_confirmed=cleanup_confirmed,
+        navigation_screenshot=navigation_screenshot,
         screenshot=screenshot,
     )
 
@@ -456,7 +462,7 @@ class SolariResearchBrowserProvider:
         page_title = "Florida Statutes section 43.16"
         pages = actions = routed_requests = 0
         replay_available = cleanup_confirmed = False
-        screenshot: str | None = None
+        navigation_screenshot = screenshot = None
         phase = "create"
         drive_error: BaseException | None = None
         cancelled_error: asyncio.CancelledError | None = None
@@ -492,6 +498,13 @@ class SolariResearchBrowserProvider:
                 phase = "interact"
                 section_link = page.get_by_role("link", name="43.16", exact=True)
                 await section_link.wait_for(state="visible")
+                NAVIGATION_ARTIFACT_PATH.parent.mkdir(parents=True, exist_ok=True)
+                await page.screenshot(path=str(NAVIGATION_ARTIFACT_PATH), full_page=False)
+                if NAVIGATION_ARTIFACT_PATH.stat().st_size > MAX_SCREENSHOT_BYTES:
+                    raise RuntimeError("screenshot_too_large")
+                navigation_screenshot = str(
+                    NAVIGATION_ARTIFACT_PATH.relative_to(Path(__file__).parent)
+                )
                 async with page.expect_navigation(
                     wait_until="commit", timeout=ACTION_SECONDS * 1000
                 ):
@@ -545,6 +558,7 @@ class SolariResearchBrowserProvider:
             routed_requests=routed_requests,
             replay_available=replay_available,
             cleanup_confirmed=cleanup_confirmed,
+            navigation_screenshot=navigation_screenshot,
             screenshot=screenshot,
         )
 

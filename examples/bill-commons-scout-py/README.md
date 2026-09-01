@@ -15,7 +15,7 @@ python -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 Successful output includes the exact official statute URL, extracted current-law
 language, a content hash, bounded runtime/page/action/request counts, replay
-availability, cleanup confirmation, and a local screenshot path. It never prints
+availability, cleanup confirmation, and local before/after screenshot paths. It never prints
 the API key, session ID, WebSocket/CDP endpoint, replay URL, cookies, or another
 bearer capability. The repository includes the [sanitized passing run](LIVE_PROOF.md)
 and its public-page screenshot.
@@ -58,8 +58,10 @@ action and cleanup windows plus a 45-second total work window, caps captured HTM
 256 KiB and the screenshot at 2 MiB, and releases the paid remote session before
 local browser teardown. Cleanup uncertainty is a failure, never a success claim.
 
-The screenshot is saved locally at
-`artifacts/live/florida-statute-43-16.png` and ignored by Git. Recording/replay
+The same live session saves a chapter-contents frame at
+`artifacts/live/florida-statutes-chapter-43.png` and the final section frame at
+`artifacts/live/florida-statute-43-16.png`. Generated live artifacts are ignored by Git;
+the two reviewed proof frames are deliberately committed. Recording/replay
 capability is checked after release, but output exposes only a boolean. Replay URLs
 are not published because they may be private capabilities.
 

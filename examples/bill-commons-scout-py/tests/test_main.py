@@ -60,6 +60,7 @@ class ScoutExampleTests(unittest.TestCase):
         capture = asyncio.run(scout.FixtureResearchBrowserProvider().capture(scout.TARGET))
         self.assertEqual(capture.mechanism, "fixture")
         self.assertEqual(capture.url, scout.SECTION_URL)
+        self.assertIsNone(capture.navigation_screenshot)
         self.assertTrue(capture.sha256)
         artifact = capture.artifacts[0]
         self.assertEqual(artifact.identifier, "43.16")
