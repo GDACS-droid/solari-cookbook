@@ -28,7 +28,7 @@ The critical live route depends only on sources classified `PUBLIC_DOWNLOAD` or 
 
 The additive Cape Coral runner now snapshots privacy-minimized official Code Enforcement, Utility Lien, and Building Permit deltas, with exact-parcel Payoff snapshots for a bounded watchlist. The first run establishes a baseline and emits zero `NEW_*` events; late old rows are updates, never falsely relabeled as new. Each transition records whether its clock came from a source event, source update, or AcreBrief detection.
 
-An opt-in live contract test has retrieved the real official schemas/data and persisted a three-source baseline across process-independent store instances. The local/VM store is deliberately not wired to Vercel: production scheduling and “new since last run” UI remain disabled until a transactional Postgres resource is approved, migrated, and adversarially verified. See [Cape Coral event stream](docs/CAPE_CORAL_EVENT_STREAM.md).
+Production now persists the three-source stream in transactional Neon Postgres and runs it once daily through an authenticated Vercel Cron. The September 1 release established a real baseline (42 code records, 240 permits, zero utility liens) with zero `NEW_*` events; an immediate second invocation loaded generation 1, advanced all three watermarks to generation 2, retained the baseline rows, and emitted zero false transitions. See [Cape Coral event stream](docs/CAPE_CORAL_EVENT_STREAM.md).
 
 ## The customer question
 
@@ -94,7 +94,7 @@ npm run verify
 npm run test:e2e
 ```
 
-Verified locally on September 1, 2026: source-policy drift check, lint, TypeScript, 57 unit/integration/API/policy tests, production build, 10 desktop/mobile E2E tests, three opt-in official City live-contract checks, a zero-vulnerability high-severity dependency audit, and a real Solari Browser + Sandbox run that completed the DOR→City foreclosure-registration exact parcel join.
+Verified on September 1, 2026: source-policy drift check, lint, TypeScript, 66 unit/integration/API/policy tests, production build, 18 desktop/mobile E2E tests locally and again against `acrebrief.com`, zero known production dependency vulnerabilities, two authenticated real source runs proving cross-invocation durability/deduplication, and a production Solari Browser + Sandbox run that completed the DOR→City foreclosure-registration exact parcel join.
 
 ## Safety and limits
 
@@ -112,7 +112,7 @@ Primary users are acquisition teams, investor/broker teams, wholesalers, and pro
 
 > **AcreBrief autonomously investigates changes across fragmented primary sources, resolves them into a parcel event graph, preserves the proof, and surfaces the few records worth a human's next hour.**
 
-Founding hypothesis: **$750–$1,500/month for a concierge design-partner pilot**, with a $500 two-week paid beta as a low-friction validation option. The customer supplies a real buy box; AcreBrief delivers a small set of source-backed investigations. No pilots, testimonials, or usage are fabricated. The production form is shown only when an approved durable sink exists; the current deployment therefore does not pretend an application was stored. See the [founding pilot package](docs/FOUNDING_PILOT.md), [product definition](docs/PRODUCT.md), and [competitive analysis](docs/COMPETITIVE_ANALYSIS.md).
+Founding hypothesis: **$750–$1,500/month for a concierge design-partner pilot**, with a $500 two-week paid beta as a low-friction validation option. The customer supplies a real buy box; AcreBrief delivers a small set of source-backed investigations. No pilots, testimonials, or usage are fabricated. The production form is backed by Postgres, requires explicit follow-up consent, deduplicates email submissions, uses a honeypot, and enforces a durable five-attempt/15-minute rate limit. See the [founding pilot package](docs/FOUNDING_PILOT.md), [product definition](docs/PRODUCT.md), and [competitive analysis](docs/COMPETITIVE_ANALYSIS.md).
 
 ## Challenge basis
 

@@ -18,7 +18,7 @@ The first page is deliberately narrow:
 
 No Lee, Charlotte, Collier, ZIP, monthly-report, or category URL belongs in the sitemap until it has independently useful content and a real update pipeline.
 
-## Implemented locally
+## Implemented and production-verified
 
 - canonical metadata and public index/follow directives;
 - `robots.txt` rules that allow public pages for `Googlebot`, `Bingbot`, `OAI-SearchBot`, and `PerplexityBot` while disallowing `/api/` crawler access;
@@ -40,7 +40,7 @@ The official OpenAI developer-docs corpus searched from this environment did not
 
 These require the domain owner and are not represented as complete:
 
-After an authorized push and deployment, `npm run release:check-public` is the hard publication gate. It verifies the exact local commit on public GitHub, expected content on all four public routes, and a real AcreBrief response for each named crawler user agent.
+`npm run release:check-public` is the hard publication gate. It verifies the exact local commit on public GitHub, expected content on all four public routes, and a real AcreBrief response for each named crawler user agent. The September 1 production release passed this gate for Googlebot, Bingbot, OAI-SearchBot, and PerplexityBot.
 
 ### Google Search Console
 

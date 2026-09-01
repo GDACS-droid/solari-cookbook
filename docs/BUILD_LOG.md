@@ -1,5 +1,14 @@
 # Build log
 
+## 2026-09-01 — production durability and launch gate
+
+- **Durable state:** provisioned the Vercel Marketplace Neon `free_v3` resource in `iad1`, applied two checksum-locked additive migrations, and verified a second migration pass was idempotent. No credential value was printed, pulled into Git, or retained in a release artifact.
+- **Truthful cross-run proof:** authenticated production run 1 baselined 42 Code rows, zero Utility Lien rows, and 240 Permit rows with zero transitions. Run 2 loaded all three prior snapshots (`bootstrap: false`), advanced them to generation 2, retained the 42/0/240 item sets, and emitted zero false `NEW_*` or update events.
+- **Operations:** scheduled authenticated daily Vercel Cron at `11:17 UTC`; unauthenticated access returns `401`. The public operations table reads safe aggregate run status from Postgres. A 45-second shared deadline sits inside the 60-second function budget and produces controlled partial/failure records with lease cleanup.
+- **Pilot intake:** replaced the unconfigured webhook path with consented Postgres persistence, case-insensitive idempotency, a honeypot, strict 4 KiB/origin/schema checks, and a durable five-attempt/15-minute HMAC-keyed limiter. Production proof stored one consented synthetic submission, accepted its idempotent duplicates, returned `429` on attempt six, and then removed the synthetic row.
+- **Production acceptance:** deployed exact public commit `6a8e4579b1bed3b547c4dd289f207f360971446b`, passed the four-route/four-crawler release gate, 18 desktop/mobile Playwright checks against `acrebrief.com`, full-page desktop/mobile visual inspection, and one real live Solari Browser + Sandbox property investigation.
+- **Adversarial repairs:** independent review drove a global cron deadline, structured lease-acquisition failures, migration-aware pilot readiness, short public status caches, source-dated transition identities for repeated state edges, zero-row snapshot proof, and deterministic served revision identity.
+
 ## 2026-09-01 — competition and discovery package
 
 - **Source-backed search wedge:** implemented one Cape Coral property-distress monitor from the already-verified City/DOR record. It uses absolute source/observation dates, official evidence links, a property-only sample, and explicit market-coverage limitations; no illustrative counts or thin county pages were added.

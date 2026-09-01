@@ -50,3 +50,7 @@ The real live run still did not persist provider billing telemetry. Production m
 ## Engineering controls
 
 Reuse one short, source-scoped Browser session for related properties; prefer contracted bulk files for detection; cache immutable instrument references; batch Sandbox parse jobs; stop after access/rate-limit warnings; and never launch Desktop merely for visual theater.
+
+## Current production infrastructure
+
+The release uses the Vercel Marketplace Neon `free_v3` plan in `iad1` and one Vercel daily cron (`17 11 * * *`). The infrastructure purchase price at provisioning was **$0**. This is a launch configuration, not a timeless cost promise: monitor database/storage/compute usage and recheck both vendors before quoting commercial gross margin. The source cron uses direct official Open Data and no Solari minutes; Solari Browser/Sandbox costs attach to an on-demand property investigation.

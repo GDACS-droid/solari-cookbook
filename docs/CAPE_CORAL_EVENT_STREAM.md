@@ -1,6 +1,6 @@
 # Cape Coral property event stream
 
-Status: implementation and live source contract verified September 1, 2026. The local/VM durable runner works; Vercel scheduling remains disabled until an approved transactional Postgres resource is attached and the SQL adapter is verified.
+Status: production-live and cross-run verified September 1, 2026. Transactional Neon Postgres stores per-source watermarks/items/transitions; an authenticated Vercel Cron runs daily at `11:17 UTC`.
 
 ## Product boundary
 
@@ -46,13 +46,13 @@ Omitted delta rows are retained. Their disappearance is never interpreted as a c
 - Timeout, 408, 429, and 5xx failures receive bounded backoff only while physical attempts remain inside that same cap. Authorization, schema, and parse failures are never retried.
 - Sources run independently. A 403, 429, timeout, malformed row, schema change, or partial page leaves that source watermark unchanged and does not prevent another source from committing.
 - The local JSON store uses a restrictive file mode, token ownership, process-start fencing against PID reuse, atomic rename, generation compare-and-swap, and transition deduplication. It is for local/VM verification only.
-- Production requires [`db/migrations/001_cape_coral_snapshots.sql`](../db/migrations/001_cape_coral_snapshots.sql) and a serializable SQL adapter. Vercel’s ephemeral filesystem is not a production state store.
+- Production uses the serializable Postgres adapter with [`001_cape_coral_snapshots.sql`](../db/migrations/001_cape_coral_snapshots.sql) plus the pilot-control migration. Source leases prevent overlapping commits; a 45-second shared abort deadline leaves 15 seconds inside the Vercel function budget for audit writes, lease release, and a truthful partial/failure response. Vercel’s ephemeral filesystem is never used as production state.
 
 ## Verification evidence
 
 Deterministic suites cover bootstrap suppression, bounded lookback, duplicate native records, malformed parcels, closure/release/finalization transitions, privacy-field rejection, schema drift, pagination exhaustion, source isolation, atomic file persistence, and stale-writer rejection.
 
-The opt-in live test ran the production adapters against the official City service. It retrieved the selected Aug. 31 code-event window, retrieved the selected parcel’s payoff row without `NAME`, and established a durable three-source Code/Lien/Permit baseline. All three sources reloaded at generation 1 and the baseline emitted zero transitions.
+The production proof ran the official City adapters twice through independently invoked HTTPS requests. Run 1 established baselines for 42 code records, zero utility liens, and 240 permits with zero transitions. Run 2 loaded prior state (`bootstrap: false`), advanced every source to generation 2, retained 42/0/240 snapshot items, and emitted zero false transitions. Neon recorded two successful audits per source. An unauthenticated cron request returned `401`; the configured scheduler lists one daily job at `17 11 * * *`.
 
 Re-run:
 
