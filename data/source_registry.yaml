@@ -102,6 +102,64 @@ sources:
       approval_expires_at: null
       accountable_reviewer: null
       max_requests_per_run: 0
+  - source_id: lee_clerk_civil_suit_case_list
+    jurisdiction: Lee County, FL
+    source_name: Lee County Clerk — Civil Suit Case List
+    official_url: https://www.leeclerk.org/services/bulk-data-services
+    access_basis: PAID_LICENSE
+    data_category: [court_case, foreclosure, new_civil_filing]
+    access_method: paid Clerk data extract requiring a records request and executed Data Extract Agreement
+    api_available: false
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: true
+    cost: $180/year; billed annually and prorated for new customers under the sample agreement
+    refresh_frequency: not published; must be confirmed before integration
+    terms_or_use_notes: official layout includes all new civil case details including foreclosures; production ingestion, customer redisplay, cloud/Solari processing, retention, delivery cadence, corrections, category codebook, and backfill remain subject to the executed customer agreement and Clerk confirmation
+    robots_notes: not applicable to authenticated extract delivery; do not automate the public court portal as a substitute
+    rate_limit_notes: delivery controls unknown until customer onboarding
+    primary_keys: [case_number]
+    date_fields: [file_date]
+    property_identifiers: [defendant_address_candidate_only, case_style_candidate_only]
+    document_types: [new_civil_case, foreclosure_candidate]
+    historical_depth: backfill availability and price unknown
+    confidence: source_declared
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: REVIEW_REQUIRED
+      exact_urls:
+        - https://www.leeclerk.org/services/bulk-data-services
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: null
+      accountable_reviewer: null
+      max_requests_per_run: 0
+  - source_id: lee_clerk_foreclosure_registry_weekly_report
+    jurisdiction: Lee County, FL
+    source_name: Lee County Clerk — Foreclosure Registry Weekly Report
+    official_url: https://www.leeclerk.org/services/bulk-data-services
+    access_basis: PUBLIC_DOWNLOAD
+    data_category: [foreclosure_registry, weekly_report, corroboration]
+    access_method: Clerk-published recurring PDF download
+    api_available: false
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public download
+    refresh_frequency: weekly
+    terms_or_use_notes: report provides registry accounting context rather than filing discovery; it has no parcel/site address or filing date and cannot emit NEW_FORECLOSURE_CASE
+    robots_notes: direct official Clerk PDF; this environment intermittently received Akamai 403 and must not bypass it
+    rate_limit_notes: fetch only on the published weekly cadence with conditional caching after ordinary access succeeds
+    primary_keys: [report_as_of_date, case_number]
+    date_fields: [as_of_date, printed_on]
+    property_identifiers: [case_number]
+    document_types: [foreclosure_registry_balance_report]
+    historical_depth: current report linked; archive depth not established
+    confidence: desk_verified
+    adapter_status: research_only
+    last_verified_at: '2026-09-01'
   - source_id: lee_clerk_foreclosure_tax_deed
     jurisdiction: Lee County, FL
     source_name: Lee County Clerk — Foreclosure and Tax Deed Sales
@@ -538,6 +596,39 @@ sources:
       automation_approval: APPROVED
       exact_urls:
         - https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/6/query
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: '2026-12-01'
+      accountable_reviewer: AcreBrief public-source review
+      max_requests_per_run: 2
+  - source_id: cape_coral_open_data_code_cases
+    jurisdiction: Cape Coral, Lee County, FL
+    source_name: City of Cape Coral Open Data — Code Enforcement Cases
+    official_url: https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/5
+    access_basis: OPEN_DATA_API
+    data_category: [foreclosure_registration, property_distress, code_event]
+    access_method: City-published ArcGIS Open Data query API
+    api_available: true
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public open-data API
+    refresh_frequency: City-maintained service with row-level opened and updated timestamps; exact publication latency is not asserted
+    terms_or_use_notes: City publishes the service as Open Data for mapping, analysis, and planning; request only case type/status/timestamps, municipal case ID, parcel/STRAP, and site address while excluding owner, mailing, and free-text description fields
+    robots_notes: structured City Open Data API; no page scraping
+    rate_limit_notes: maximum two exact bounded record-query attempts per investigation; retry only transient transport/408/429/5xx failures and stop on schema, redirect, or authorization errors
+    primary_keys: [cm_code_case_id, case_number]
+    date_fields: [opened, updated, closed]
+    property_identifiers: [main_linked_parcel, strap_gis, site_address_gis]
+    document_types: [foreclosure_registration, code_case]
+    historical_depth: source service contains historical cases; exact depth not asserted
+    confidence: source_declared
+    adapter_status: live_ready
+    last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: APPROVED
+      exact_urls:
+        - https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/5/query
       terms_reviewed_at: '2026-09-01'
       approval_expires_at: '2026-12-01'
       accountable_reviewer: AcreBrief public-source review

@@ -19,6 +19,15 @@ function configuredEndpoint(): URL | undefined {
   return url
 }
 
+/** Readiness only. Never expose the configured destination to the browser. */
+export function GET(): Response {
+  try {
+    return Response.json({ configured: Boolean(configuredEndpoint()) }, { headers: { "Cache-Control": "no-store" } })
+  } catch {
+    return Response.json({ configured: false }, { headers: { "Cache-Control": "no-store" } })
+  }
+}
+
 /**
  * Privacy-minimal pilot intake. The deployment owner supplies the server-only
  * webhook; the URL and its response are never exposed to the browser.

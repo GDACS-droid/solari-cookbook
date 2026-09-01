@@ -18,11 +18,11 @@ The production adapter executed this chain on September 1, 2026:
 ```text
 Solari Browser → official DOR public-data catalog
 Solari Sandbox → DOR 2026 Lee NAL ZIP → exact PARCEL_ID projection
-City Open Data → one exact utility-lien row
+City Open Data → one exact foreclosure-registration row
 Solari Sandbox → trim(City.Strap) === DOR.PARCEL_ID → evidence manifest
 ```
 
-For the public demo parcel, the DOR archive produced one 2026 preliminary record and the City source returned one selected row with `Active_Lien=Y`. The source lien date is February 25, 2022. This is a live status/enrichment path, not a fresh 2026 foreclosure detector.
+For the primary public demo parcel, the DOR archive produced one 2026 preliminary record and the City source returned municipal foreclosure registration `CODE26-020878`, source-opened August 31, 2026 with an exact STRAP. The older utility-lien adapter remains available as live status enrichment but is not the primary queue event.
 
 ## Review-required and research sources
 
@@ -51,4 +51,4 @@ For the public demo parcel, the DOR archive produced one 2026 preliminary record
 
 ## Operational findings
 
-The City table's latest active lien date is July 14, 2022; it is valuable current-status enrichment but cannot answer “what new lien appeared today?” The next event-detector milestone is a clearly licensed/official feed with 2026 creation/update timestamps and stable parcel identifiers. Broken or blocked sources remain visible as degraded and never silently substitute fixture facts.
+The City foreclosure-registration table supplies 2026 opened/updated timestamps and stable municipal case/parcel identifiers. It supports a recent source-dated event, while `NEW SINCE LAST RUN` still requires a durable successful prior snapshot. Lee Clerk Civil Suit Case List is the next licensed milestone for the narrower `NEW_FORECLOSURE_CASE` court trigger. Broken or blocked sources remain visible as degraded and never silently substitute fixture facts.

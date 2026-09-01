@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { assembleOfficialGraph, createSourceRequestConsumer, NAL_PARSER_PROGRAM, runOfficialLiveInvestigation, type DorPropertyRecord } from "@/lib/official-live"
+import { assembleFreshRegistrationGraph, assembleOfficialGraph, createSourceRequestConsumer, NAL_PARSER_PROGRAM, runOfficialLiveInvestigation, type DorPropertyRecord } from "@/lib/official-live"
 
 const dor: DorPropertyRecord = {
   countyNumber: "46",
@@ -39,9 +39,47 @@ const city = {
   OBJECTID: 1665843 as const,
 }
 
+const freshDor: DorPropertyRecord = {
+  ...dor,
+  parcelId: "304424C2007000560",
+  justValue: 368980,
+  assessedSchool: 368980,
+  assessedNonSchool: 368980,
+  taxableSchool: 368980,
+  taxableNonSchool: 368980,
+  landValue: 66215,
+  livingAreaSquareFeet: 3694,
+  siteAddress: "1447 SE 17TH TER",
+  siteZip: "33990",
+  legalDescription: "CAPE CORAL UNIT 21",
+  stateParcelId: "C46-000-496-0700-5",
+}
+
+const freshCity = {
+  CMCODECASEID: "d07a6590-aa57-4739-a755-e4b72128b335" as const,
+  CaseNumber: "CODE26-020878" as const,
+  Status: "Open" as const,
+  opened: 1788198162000,
+  closed: null,
+  updated: 1788198212640,
+  CaseType: "FORECLOSURE REGISTRATION" as const,
+  CaseSubtype: "REGISTERED" as const,
+  Main_Linked_Parcel: "304424C2007000560" as const,
+  STRAPGIS: "304424C2007000560" as const,
+  SiteAddressGIS: "1447 SE 17TH TER" as const,
+  Main_Site_City: "Cape Coral" as const,
+  Main_Site_State: "FL" as const,
+  Main_Site_Zip: "33990" as const,
+}
+
+const retrievals = {
+  dorRetrievedAt: "2026-09-01T15:59:00.000Z",
+  cityRetrievedAt: "2026-09-01T16:00:00.000Z",
+}
+
 describe("official live property graph", () => {
   it("promotes an exact City STRAP to DOR parcel join with same-run evidence", () => {
-    const graph = assembleOfficialGraph(dor, city, "2026-09-01T16:00:00.000Z")
+    const graph = assembleOfficialGraph(dor, city, retrievals)
     expect(graph.property.countyParcelId).toBe(dor.parcelId)
     expect(graph.events).toHaveLength(1)
     expect(graph.events[0]).toMatchObject({ eventType: "LIEN_STATUS_ACTIVE", match: "EXACT", confidence: "HIGH" })
@@ -51,14 +89,46 @@ describe("official live property graph", () => {
   })
 
   it("retains no owner, customer, account, or contact fields", () => {
-    const graph = assembleOfficialGraph(dor, city, "2026-09-01T16:00:00.000Z")
+    const graph = assembleOfficialGraph(dor, city, retrievals)
     expect(graph.owners).toEqual([])
     const rawFieldNames = graph.evidence.flatMap((item) => Object.keys(item.rawValue as Record<string, unknown>))
     expect(rawFieldNames.join(" ")).not.toMatch(/owner|customer|account|phone|email|mailing/i)
   })
 
+  it("keeps fresh-event, first-seen, retrieval, and source-update clocks distinct", () => {
+    const graph = assembleFreshRegistrationGraph(freshDor, freshCity, retrievals)
+    expect(graph.events[0]).toMatchObject({
+      eventType: "FORECLOSURE_REGISTRATION_OPENED",
+      eventDate: "2026-08-31T17:42:42.000Z",
+      firstSeenAt: "2026-09-01T15:11:48.000Z",
+      detectedAt: "2026-09-01T15:11:48.000Z",
+      match: "EXACT",
+      confidence: "HIGH",
+    })
+    expect(graph.evidence[0]).toMatchObject({
+      sourceId: "cape_coral_open_data_code_cases",
+      effectiveDate: "2026-08-31T17:42:42.000Z",
+      sourceUpdatedAt: "2026-08-31T17:43:32.640Z",
+      retrievedAt: retrievals.cityRetrievedAt,
+    })
+    expect(graph.evidence.find((item) => item.sourceId === "florida_dor_property_tax_data")?.retrievedAt).toBe(retrievals.dorRetrievedAt)
+    const rawFieldNames = graph.evidence.flatMap((item) => Object.keys(item.rawValue as Record<string, unknown>))
+    expect(rawFieldNames.join(" ")).not.toMatch(/owner|mailing|phone|email/i)
+    const repeat = assembleFreshRegistrationGraph(freshDor, freshCity, { dorRetrievedAt: "2026-09-01T17:59:00.000Z", cityRetrievedAt: "2026-09-01T18:00:00.000Z" })
+    expect(repeat.events[0].firstSeenAt).toBe(graph.events[0].firstSeenAt)
+    expect(repeat.evidence[0].retrievedAt).toBe("2026-09-01T18:00:00.000Z")
+  })
+
+  it("fails closed when a foreclosure registration and DOR parcel differ", () => {
+    expect(() => assembleFreshRegistrationGraph(dor, freshCity, retrievals)).toThrow(/exactly match/i)
+  })
+
   it("fails closed when the municipal STRAP and state parcel ID differ", () => {
-    expect(() => assembleOfficialGraph(dor, { ...city, Strap: "314424C2006420410" }, "2026-09-01T16:00:00.000Z")).toThrow(/exactly match/i)
+    expect(() => assembleOfficialGraph(dor, { ...city, Strap: "314424C2006420410" }, retrievals)).toThrow(/exactly match/i)
+  })
+
+  it("fails closed when a mutable lien row no longer matches its persisted observation", () => {
+    expect(() => assembleOfficialGraph(dor, { ...city, Lien_Amount: city.Lien_Amount + 1 }, retrievals)).toThrow(/persisted first-seen observation/i)
   })
 
   const headers = ["CO_NO", "PARCEL_ID", "ASMNT_YR", "JV", "AV_SD", "AV_NSD", "TV_SD", "TV_NSD", "LND_VAL", "LND_SQFOOT", "ACT_YR_BLT", "TOT_LVG_AREA", "NO_BULDNG", "DOR_UC", "PHY_ADDR1", "PHY_CITY", "PHY_ZIPCD", "S_LEGAL", "STATE_PAR_ID"]
@@ -111,5 +181,8 @@ describe("official live property graph", () => {
     consume("cape_coral_open_data_utility_liens")
     consume("cape_coral_open_data_utility_liens")
     expect(() => consume("cape_coral_open_data_utility_liens")).toThrow(/physical-request budget/i)
+    consume("cape_coral_open_data_code_cases")
+    consume("cape_coral_open_data_code_cases")
+    expect(() => consume("cape_coral_open_data_code_cases")).toThrow(/physical-request budget/i)
   })
 })

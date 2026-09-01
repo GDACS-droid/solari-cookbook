@@ -12,6 +12,7 @@ describe("generated runtime source policy", () => {
   it("allows only the exact reviewed official download and Open Data endpoints", () => {
     expect(sourcePolicyAllows("florida_dor_property_tax_data", "https://www.floridarevenue.com/property/Pages/DataPortal_RequestAssessmentRollGISData.aspx", new Date("2026-09-01"))).toBe(true)
     expect(sourcePolicyAllows("cape_coral_open_data_utility_liens", "https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/6/query", new Date("2026-09-01"))).toBe(true)
+    expect(sourcePolicyAllows("cape_coral_open_data_code_cases", "https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/5/query", new Date("2026-09-01"))).toBe(true)
     expect(sourcePolicyAllows("cape_coral_open_data_utility_liens", "https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/5/query", new Date("2026-09-01"))).toBe(false)
   })
 
@@ -22,5 +23,6 @@ describe("generated runtime source policy", () => {
   it("budgets every worst-case physical attempt in the official live chain", () => {
     expect(sourceRequestBudget("florida_dor_property_tax_data")).toBe(4)
     expect(sourceRequestBudget("cape_coral_open_data_utility_liens")).toBe(2)
+    expect(sourceRequestBudget("cape_coral_open_data_code_cases")).toBe(2)
   })
 })

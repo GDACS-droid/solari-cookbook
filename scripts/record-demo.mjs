@@ -30,9 +30,13 @@ page.setDefaultTimeout(180_000)
 await pause(4_000)
 await show("#today", 4_000)
 await show(".property-card", 4_000)
-await show("#investigate", 4_000)
-if (!recordLive) await page.getByRole("checkbox", { name: "Run live with Solari" }).uncheck()
-await page.getByRole("button", { name: "Investigate live" }).click()
+if (recordLive) {
+  await page.getByRole("button", { name: "Investigate this property live" }).click()
+} else {
+  await show("#investigate", 4_000)
+  await page.getByRole("checkbox", { name: "Run live with Solari" }).uncheck()
+  await page.getByRole("button", { name: "Investigate live" }).click()
+}
 await page.getByLabel("Investigation result").waitFor({ state: "visible" })
 await show(".live-run", 6_000)
 await show("#operations", 4_000)
@@ -49,5 +53,5 @@ await rename(recordedPath, intermediatePath)
 // The real DOR archive download is intentionally visible but can spend tens of
 // seconds without a new frame. Compress the walkthrough to the challenge's
 // 60–90 second window without cutting or fabricating any source transition.
-await run("ffmpeg", ["-y", "-i", intermediatePath, "-vf", "setpts=PTS/1.4", "-c:v", "libx264", "-preset", "medium", "-crf", "28", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", finalPath])
+await run("ffmpeg", ["-y", "-i", intermediatePath, "-vf", "setpts=PTS/1.4,tpad=stop_mode=clone:stop_duration=2", "-c:v", "libx264", "-preset", "medium", "-crf", "28", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-an", finalPath])
 await unlink(intermediatePath)

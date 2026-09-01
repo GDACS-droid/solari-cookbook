@@ -13,7 +13,7 @@ flowchart LR
   B --> S[Solari Sandbox\ndownload 43 MB DOR NAL ZIP]
   S --> Z[ZIP security gate\n1 exact entry · no traversal/encryption\n60 MB compressed / 400 MB expanded caps]
   Z --> C[RFC-4180 CSV parser\nrequired-header + schema fingerprint\nexact-one PARCEL_ID lookup\nprivacy projection]
-  P -->|OPEN_DATA_API| M[City Cape Coral Open Data\none exact utility-lien row\ncontact/account fields excluded]
+  P -->|OPEN_DATA_API| M[City Cape Coral Open Data\none exact foreclosure-registration row\nowner/mailing/free-text fields excluded]
   C --> J[Solari Sandbox exact join\ntrim STRAP = PARCEL_ID\nschema + evidence hash]
   M --> J
   J --> G[Property event graph\nsource facts · calculated join\nconfidence · unavailable facts]

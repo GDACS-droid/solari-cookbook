@@ -12,6 +12,8 @@ export type MatchKind = "EXACT" | "CANDIDATE" | "UNRESOLVED"
 export type EventType =
   | "NEW_LIS_PENDENS"
   | "NEW_FORECLOSURE_CASE"
+  | "NEW_FORECLOSURE_REGISTRATION"
+  | "FORECLOSURE_REGISTRATION_OPENED"
   | "FORECLOSURE_NOTICE_PUBLISHED"
   | "FORECLOSURE_SALE_NOTICE_PUBLISHED"
   | "NEW_LIEN"
@@ -33,6 +35,8 @@ export interface Evidence {
   sourceId: string
   sourceUrl: string
   retrievedAt: string
+  /** Timestamp published by the source for its last material row update, when available. */
+  sourceUpdatedAt?: string
   effectiveDate?: string
   rawValue: unknown
   normalizedValue?: unknown
@@ -92,6 +96,9 @@ export interface PropertyEvent {
   caseId?: string
   recordedDocumentId?: string
   eventDate: string
+  /** First successful AcreBrief observation; distinct from the source event date. */
+  firstSeenAt: string
+  /** @deprecated Use firstSeenAt. Retained for serialized-client compatibility. */
   detectedAt: string
   match: MatchKind
   confidence: Confidence
@@ -202,9 +209,15 @@ export function scoreOpportunity(graph: PropertyGraph, now = new Date()): Opport
     const ageDays = Math.floor((now.getTime() - new Date(event.eventDate).getTime()) / 86_400_000)
     // Future effective dates are not fresh detections. They may be scored by
     // their explicit event family below, but never earn a false recency bonus.
-    if (event.eventType !== "LIEN_STATUS_ACTIVE" && ageDays >= 0 && ageDays <= 7) add(18, `New ${event.eventType.replaceAll("_", " ").toLowerCase()} signal (${ageDays}d)`, event.eventId)
+    if (event.eventType !== "LIEN_STATUS_ACTIVE" && ageDays >= 0 && ageDays <= 7) {
+      const recencyLabel = event.eventType === "NEW_FORECLOSURE_REGISTRATION" || event.eventType === "FORECLOSURE_REGISTRATION_OPENED"
+        ? "Recent foreclosure registration source event"
+        : `New ${event.eventType.replaceAll("_", " ").toLowerCase()} signal`
+      add(18, `${recencyLabel} (${ageDays}d)`, event.eventId)
+    }
   }
   if (eventTypes.has("NEW_FORECLOSURE_CASE")) add(16, "Foreclosure case signal")
+  if (eventTypes.has("NEW_FORECLOSURE_REGISTRATION") || eventTypes.has("FORECLOSURE_REGISTRATION_OPENED")) add(14, "Vacant-property foreclosure registration signal")
   if (eventTypes.has("FORECLOSURE_NOTICE_PUBLISHED")) add(10, "Foreclosure notice published")
   if (eventTypes.has("FORECLOSURE_SALE_NOTICE_PUBLISHED")) add(12, "Foreclosure sale notice published")
   if (eventTypes.has("NEW_LIS_PENDENS")) add(14, "Lis pendens recorded")

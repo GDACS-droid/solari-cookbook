@@ -7,9 +7,14 @@ import { verifiedSampleGraph, verifiedSampleScore } from "@/lib/verified-sample"
 export const investigationInput = z.object({
   mode: z.enum(["live", "verified_sample"]).default("verified_sample"),
   // The initial permitted demo is narrow on purpose: request data never controls a URL.
-  caseNumber: z.literal("CAPE-CORAL-UTILITY-LIEN").default("CAPE-CORAL-UTILITY-LIEN"),
-  propertyAddress: z.literal("413 SW 26th Ave, Cape Coral, FL 33991").default("413 SW 26th Ave, Cape Coral, FL 33991"),
-}).strict()
+  caseNumber: z.enum(["CODE26-020878", "CAPE-CORAL-UTILITY-LIEN"]).default("CODE26-020878"),
+  propertyAddress: z.enum(["1447 SE 17th Ter, Cape Coral, FL 33990", "413 SW 26th Ave, Cape Coral, FL 33991"]).default("1447 SE 17th Ter, Cape Coral, FL 33990"),
+}).strict().superRefine((value, context) => {
+  const expected = value.caseNumber === "CODE26-020878"
+    ? "1447 SE 17th Ter, Cape Coral, FL 33990"
+    : "413 SW 26th Ave, Cape Coral, FL 33991"
+  if (value.propertyAddress !== expected) context.addIssue({ code: "custom", path: ["propertyAddress"], message: "Case and reviewed property target do not match" })
+})
 export type InvestigationInput = z.infer<typeof investigationInput>
 export type InvestigationStage = "queued" | "source" | "normalizing" | "complete" | "review_required" | "configuration_required" | "failed"
 export interface InvestigationUpdate {
@@ -84,7 +89,7 @@ const PROPERTY_EVIDENCE_SOURCES: readonly PropertyEvidenceSource[] = [
 
 const VERIFIED_SAMPLE_SOURCES = [
   { sourceId: "florida_dor_property_tax_data", label: "Florida DOR 2026 preliminary Lee parcel record" },
-  { sourceId: "cape_coral_open_data_utility_liens", label: "City Open Data active utility-lien record" },
+  { sourceId: "cape_coral_open_data_code_cases", label: "City Open Data foreclosure-registration record" },
 ] as const
 
 const allowedOrigin = (url: string) => {
@@ -130,6 +135,7 @@ export function assembleLiveGraph(input: InvestigationInput, observations: Evide
       sourceRecordId: source.sourceRecordId,
       caseId,
       eventDate: source.eventDate,
+      firstSeenAt: evidence.retrievedAt,
       detectedAt: evidence.retrievedAt,
       match: "CANDIDATE",
       confidence: "MEDIUM",

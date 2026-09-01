@@ -1,71 +1,66 @@
 # Sample investigation brief — live official-data path
 
-**Run status:** completed September 1, 2026 against current official sources with Solari Browser and Sandbox. A verified privacy-minimized replay is bundled for repeatability. No owner, mailing, customer, account, phone, or email fields are in this report.
+**Run status:** completed September 1, 2026 against current official sources with Solari Browser and Sandbox. A verified privacy-minimized replay is bundled. No owner, mailing, customer, account, phone, email, or free-text case-description fields are in this report.
 
 ## Property identity
 
 | Field | Value | Classification / provenance |
 | --- | --- | --- |
-| Site | 413 SW 26th Ave, Cape Coral, FL 33991 | source fact · Florida DOR 2026 preliminary Lee NAL |
-| County parcel / STRAP | `174423C3039260170` | source fact · DOR and City Open Data |
-| Legal | Cape Coral Unit 54 | source fact · DOR |
-| Resolution | exact / HIGH | calculated · `trim(City.Strap) === DOR.PARCEL_ID` |
-| 2026 preliminary just value | $238,922 | source fact · DOR; not an AVM, market price, or equity estimate |
-| Actual year built / living area | 2005 / 2,545 sq ft | source facts · DOR |
+| Site | 1447 SE 17th Ter, Cape Coral, FL 33990 | source fact · Florida DOR 2026 preliminary Lee NAL |
+| County parcel / STRAP | `304424C2007000560` | source fact · DOR and City Open Data |
+| Legal | Cape Coral Unit 21 | source fact · DOR |
+| Resolution | exact / high evidence confidence | calculated · `City.STRAPGIS === City.Main_Linked_Parcel === DOR.PARCEL_ID` |
+| 2026 preliminary just value | $368,980 | source fact · DOR; not an AVM, market price, or equity estimate |
+| Actual year built / living area | 2005 / 3,694 sq ft | source facts · DOR |
 
-## Event signal
+## Event signal and four clocks
 
-The City of Cape Coral Utility Lien Open Data source returned the selected record with:
+The City of Cape Coral Code Enforcement Open Data source returned municipal case `CODE26-020878` with:
 
-- `Active_Lien = Y` at live retrieval;
-- source lien date February 25, 2022;
-- no source release date;
-- the same STRAP as the DOR record.
+- `CaseType = FORECLOSURE REGISTRATION`;
+- `CaseSubtype = REGISTERED`;
+- `Status = Open`;
+- source `opened = 2026-08-31T17:42:42.000Z`;
+- source `updated = 2026-08-31T17:43:32.640Z`;
+- exact STRAP `304424C2007000560`.
 
-This is a **current source-status check for a historic municipal-lien row**, not a claim that a lien was created today. The City's table contains no active lien dated in 2026; its latest active source date is July 14, 2022.
+The City says the program applies when a mortgagee has initiated foreclosure and the property is vacant. This is a `FORECLOSURE_REGISTRATION_OPENED` municipal event—not the underlying court filing, judgment, or sale.
 
-## Priority score
+| Clock | Meaning |
+| --- | --- |
+| `eventDate` | official City `opened` timestamp |
+| `sourceUpdatedAt` | official City `updated` timestamp |
+| `firstSeenAt` | immutable first successful AcreBrief observation stored with the reviewed demo artifact |
+| `retrievedAt` | completion time of the current validated source retrieval |
 
-**10 / 100 — HIGH evidence confidence**
+The current selected-record path does not have durable prior-state comparison, so it does not emit `NEW_FORECLOSURE_REGISTRATION` or say “new since last run.”
 
-- +10 recorded-lien signal;
-- +0 recency because the source event date is 2022;
+## Preliminary signal score
+
+**32 / 100 — high evidence confidence**
+
+- +18 recent source-dated registration event;
+- +14 vacant-property foreclosure registration signal;
 - +0 equity because no current payoff/equity source exists;
-- +0 foreclosure/auction because those sources were not part of this approved run.
+- +0 court/auction because those facts were not established.
 
-Evidence confidence and opportunity magnitude are deliberately separate. “HIGH” means the two official sources and exact join support the displayed facts; it does not mean the property is a high-quality acquisition.
+Evidence confidence and opportunity magnitude are separate. “High” means the two official source records and exact native-key join support the displayed facts; it does not mean the property is a high-quality acquisition.
 
 ## Fact ledger
 
-**Source facts**
+**Source facts:** City case type/subtype/status/opened/updated/STRAP/site address and DOR preliminary parcel/assessment/physical fields.
 
-- DOR 2026 preliminary parcel/assessment/physical fields listed above;
-- City source currently reports the selected utility-lien row active;
-- source lien date and no release date in that selected record.
+**Calculated:** exact native-key join, stable source-record fingerprint, transparent 32-point signal score, and evidence-manifest hashes.
 
-**Calculated**
+**Inferred:** none promoted in the public brief.
 
-- exact trimmed native-key join;
-- stable event fingerprint using parcel, lien reference, event date, amount, active state, and release state;
-- transparent ten-point lien score;
-- archive/evidence manifest hashes.
-
-**Inferred**
-
-- none promoted in the public brief.
-
-**Unavailable**
-
-- current foreclosure, court, and auction status;
-- current tax balance/delinquency;
-- lien priority, legal enforceability, and payoff;
-- mortgage balances, equity, title clearance;
-- owner behavior or willingness to sell.
+**Unavailable:** underlying court case/filing date; tax balance/delinquency; lien priority/payoff; mortgage balances; equity; title clearance; seller behavior or willingness to sell.
 
 ## Evidence
 
-1. [Florida DOR assessment-roll and GIS public-download statement](https://www.floridarevenue.com/property/Pages/DataPortal_RequestAssessmentRollGISData.aspx).
-2. [Florida DOR current 2026 preliminary Lee NAL ZIP](https://www.floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Tax%20Roll%20Data%20Files/NAL/2026P/Lee%2046%20Preliminary%20NAL%202026.zip).
-3. [City of Cape Coral Utility Lien Open Data layer](https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/6).
+1. [City of Cape Coral Code Enforcement Open Data layer](https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/5).
+2. [City abandoned/vacant property registration explanation](https://www.capecoral.gov/departments/development_services/code_compliance_division/abandoned_vacant_property.php).
+3. [Florida DOR assessment-roll and GIS public-download statement](https://www.floridarevenue.com/property/Pages/DataPortal_RequestAssessmentRollGISData.aspx).
+4. [Florida DOR current 2026 preliminary Lee NAL ZIP](https://www.floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Tax%20Roll%20Data%20Files/NAL/2026P/Lee%2046%20Preliminary%20NAL%202026.zip).
 
-The live Sandbox archive checksum observed during the successful run was retained in run evidence. Provider session and Sandbox identifiers exposed to the browser are irreversible 12-character hashes, not raw provider handles.
+Provider Browser/Sandbox identifiers exposed to the browser are one-way public run references, not raw provider handles.

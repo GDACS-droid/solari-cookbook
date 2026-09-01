@@ -1,0 +1,10 @@
+{
+  "cape_coral_foreclosure_registration": {
+    "sourceRecordId": "d07a6590-aa57-4739-a755-e4b72128b335",
+    "firstSeenAt": "2026-09-01T15:11:48.000Z"
+  },
+  "cape_coral_utility_lien": {
+    "sourceRecordId": "city-lien-row_2c087952642d52979dea",
+    "firstSeenAt": "2026-09-01T16:00:00.000Z"
+  }
+}

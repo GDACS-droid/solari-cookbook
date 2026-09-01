@@ -20,7 +20,8 @@ describe("investigation endpoint", () => {
     const body = await response.text()
     expect(body).toContain('"clearlyLabeledReplay":true')
     expect(body).toContain('"stage":"complete"')
-    expect(body).toContain('"score":10')
+    expect(body).toContain('"score":32')
+    expect(body).toContain('"eventType":"FORECLOSURE_REGISTRATION_OPENED"')
   })
 
   it("rejects unknown request fields instead of silently accepting URL input", async () => {

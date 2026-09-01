@@ -11,8 +11,8 @@ describe("AcreBrief domain invariants", () => {
 
   it("never upgrades a fuzzy parcel match to exact", () => {
     const known = [verifiedSampleGraph.property]
-    expect(resolveParcel({ county: "LEE", siteAddress: "413 SW 26th Ave, Cape Coral, FL 33991" }, known).kind).toBe("CANDIDATE")
-    expect(resolveParcel({ county: "LEE", siteAddress: "413 26th Ave" }, known).kind).toBe("CANDIDATE")
+    expect(resolveParcel({ county: "LEE", siteAddress: "1447 SE 17th Ter, Cape Coral, FL 33990" }, known).kind).toBe("CANDIDATE")
+    expect(resolveParcel({ county: "LEE", siteAddress: "1447 17th Ter" }, known).kind).toBe("CANDIDATE")
   })
 
   it("emits only snapshot changes and treats duplicate filings idempotently", () => {
@@ -33,8 +33,8 @@ describe("AcreBrief domain invariants", () => {
 
   it("scores known event signals and names unknown financial facts", () => {
     const score = scoreOpportunity(verifiedSampleGraph, new Date("2026-09-01T12:00:00.000Z"))
-    expect(score.score).toBe(10)
-    expect(score.reasons).toContainEqual(expect.objectContaining({ label: "Municipal lien reported active" }))
+    expect(score.score).toBe(32)
+    expect(score.reasons).toContainEqual(expect.objectContaining({ label: "Vacant-property foreclosure registration signal" }))
     expect(score.unknown.join(" ")).toMatch(/mortgage payoff/i)
     expect(score.disclaimer).toMatch(/Decision support/i)
   })
@@ -42,7 +42,7 @@ describe("AcreBrief domain invariants", () => {
   it("never promotes an active status observation into a fresh-event bonus", () => {
     const observedToday = {
       ...verifiedSampleGraph,
-      events: verifiedSampleGraph.events.map((event) => ({ ...event, eventDate: "2026-09-01" })),
+      events: verifiedSampleGraph.events.map((event) => ({ ...event, eventType: "LIEN_STATUS_ACTIVE" as const, eventDate: "2026-09-01" })),
     }
     const score = scoreOpportunity(observedToday, new Date("2026-09-01T12:00:00.000Z"))
     expect(score.score).toBe(10)

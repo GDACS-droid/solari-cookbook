@@ -2,9 +2,9 @@
 
 **Finding a distressed-property signal is easy. Understanding whether the property deserves an acquisition team's time can require five government systems. AcreBrief does that investigation automatically.**
 
-`City municipal-lien signal → exact Florida DOR parcel → evidence-backed brief`
+`source-dated foreclosure registration → exact Florida DOR parcel → evidence-backed brief`
 
-![AcreBrief official-data property investigation dashboard](assets/screenshots/acrebrief-desktop.png)
+![AcreBrief official-data property investigation dashboard](assets/screenshots/fresh-event/acrebrief-desktop.png)
 
 [Open the live product](https://acrebrief.com) · [Watch the 60–90 second walkthrough](assets/demo/acrebrief-demo.mp4)
 
@@ -16,11 +16,11 @@ Press **Investigate live** on the Cape Coral property. AcreBrief performs a real
 
 1. **Solari Browser** opens Florida DOR's official assessment-roll catalog and verifies source identity.
 2. **Solari Sandbox** downloads DOR's current 43 MB `2026P` Lee NAL archive, checks the ZIP entry and size ceilings, decompresses 285 MB in isolation, validates unique required headers, fingerprints the observed 165-column schema, rejects duplicate parcel rows, and emits one privacy-minimized parcel record.
-3. The server queries one exact record from the **City of Cape Coral Utility Lien Open Data API**, excluding customer, account, owner, mailing, and contact fields at retrieval.
+3. The server queries one exact **City of Cape Coral Foreclosure Registration** Open Data record, excluding owner, mailing, contact, and free-text description fields at retrieval.
 4. **Solari Sandbox** independently verifies `trim(City.Strap) === DOR.PARCEL_ID`, hashes the evidence manifest, and rejects a non-exact join.
-5. AcreBrief renders the source facts, historic event date, transparent score, and material unknowns.
+5. AcreBrief renders the City `opened` event clock, City `updated` clock, immutable first-seen observation, current retrieval time, transparent score, and material unknowns.
 
-The current City row is live-retrieved and marked active by its source; its source lien date is February 2022. AcreBrief does **not** relabel it “new today.” The run demonstrates a real official-data investigation and exact parcel resolution while a fresh affirmatively licensed foreclosure detector remains the next source milestone.
+The selected City record is a real municipal foreclosure registration source-opened August 31, 2026 and marked `REGISTERED` / `Open`. The City says this program applies when a mortgagee has initiated foreclosure on a vacant property. AcreBrief does **not** turn that into a court filing, judgment, auction, title fact, or persisted snapshot diff. The static queue uses an absolute source date; successful current retrieval says `LIVE VERIFIED RESULT`. `NEW_FORECLOSURE_REGISTRATION` and “new since last run” remain reserved for durable prior-state comparison.
 
 The critical live route depends only on sources classified `PUBLIC_DOWNLOAD` or `OPEN_DATA_API`. Business Observer and unapproved Clerk/browser sources remain `REVIEW_REQUIRED` and are never opened by this path.
 
@@ -61,6 +61,7 @@ Current `LIVE_READY` chain:
 | Source | Access basis | Job |
 | --- | --- | --- |
 | Florida DOR 2026 preliminary Lee NAL | `PUBLIC_DOWNLOAD` | current official parcel and assessment facts |
+| Cape Coral Foreclosure Registration Open Data | `OPEN_DATA_API` | source-dated municipal event, opened/updated clocks, exact STRAP |
 | Cape Coral Utility Lien Open Data | `OPEN_DATA_API` | active municipal-lien source status and source event date |
 | Lee County parcel/locator REST | `OPEN_DATA_API` | independent exact parcel/address lookup, available as corroboration |
 
@@ -85,14 +86,14 @@ npm run verify
 npm run test:e2e
 ```
 
-Verified locally on September 1, 2026: source-policy drift check, lint, TypeScript, 31 unit/integration tests, production build, 6 desktop/mobile E2E tests, and a real Solari Browser + Sandbox run that completed the DOR→City exact parcel join.
+Verified locally on September 1, 2026: source-policy drift check, lint, TypeScript, 35 unit/integration tests, production build, 10 desktop/mobile E2E tests, a zero-vulnerability high-severity dependency audit, and a real Solari Browser + Sandbox run that completed the DOR→City foreclosure-registration exact parcel join.
 
 ## Safety and limits
 
 - No CAPTCHA bypass, authentication evasion, publisher scraping, broad party search, or mass outreach.
 - No owner, customer, account, mailing, phone, or email fields in the public graph.
 - The DOR roll is preliminary and assessment just value is not an AVM, current market price, or equity estimate.
-- A City `Active_Lien=Y` field is evidence of what the source currently reports—not lien priority, enforceability, payoff, title condition, current tax delinquency, or seller intent.
+- A City `FORECLOSURE REGISTRATION` row is evidence of a municipal registration—not the underlying court filing date/number, lien priority, payoff, title condition, current tax delinquency, or seller intent.
 - Scores triage investigation effort. Missing data remains explicitly unavailable and never becomes zero.
 
 Read [privacy and compliance](docs/PRIVACY_AND_COMPLIANCE.md), [security](docs/SECURITY.md), and the [sample official-data report](docs/SAMPLE_INVESTIGATION_REPORT.md).
@@ -103,7 +104,7 @@ Primary users are acquisition teams, investor/broker teams, wholesalers, and pro
 
 > **AcreBrief autonomously investigates changes across fragmented primary sources, resolves them into a parcel event graph, preserves the proof, and surfaces the few records worth a human's next hour.**
 
-Pilot hypothesis: **$499/seat/month** for daily briefs, live investigations, evidence export, watchlists, and review queues. No pilots, testimonials, or usage are fabricated. See [Product](docs/PRODUCT.md) and [competitive analysis](docs/COMPETITIVE_ANALYSIS.md).
+Pilot hypothesis: **$499/seat/month** for daily briefs, live investigations, evidence export, watchlists, and review queues. No pilots, testimonials, or usage are fabricated. The production form is shown only when an approved server-side webhook exists; the current deployment has no approved sink and therefore exposes no clickable 503 form. See [Product](docs/PRODUCT.md) and [competitive analysis](docs/COMPETITIVE_ANALYSIS.md).
 
 ## Challenge basis
 
