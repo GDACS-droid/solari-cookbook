@@ -3,7 +3,10 @@ import type { NextConfig } from "next"
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
-  serverExternalPackages: ["@solarisdk/browser", "@solarisdk/sdk", "patchright-core"],
+  // Patchright contains optional runtime-loaded BiDi modules and must remain a
+  // Node external. Bundle the Solari clients themselves so Vercel does not
+  // have to resolve Next's hashed external-package symlinks at invocation.
+  serverExternalPackages: ["patchright-core"],
   async headers() {
     return [{
       source: "/:path*",

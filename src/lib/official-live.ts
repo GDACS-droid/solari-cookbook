@@ -60,6 +60,17 @@ const cityResponseSchema = z.object({
 const update = (stage: InvestigationUpdate["stage"], message: string, extras: Omit<InvestigationUpdate, "stage" | "message" | "at"> = {}): InvestigationUpdate => ({ stage, message, at: new Date().toISOString(), ...extras })
 const publicRunRef = (kind: "browser" | "sandbox", value: string) => `${kind}_${createHash("sha256").update(value).digest("hex").slice(0, 12)}`
 
+async function createSolariClients(apiKey: string) {
+  const [{ Solari }, { SolariClient }] = await Promise.all([
+    import("@solarisdk/browser"),
+    import("@solarisdk/sdk"),
+  ])
+  return {
+    browserClient: new Solari({ apiKey }),
+    sandboxClient: new SolariClient({ apiKey }),
+  }
+}
+
 export function createSourceRequestConsumer(): (sourceId: RuntimeSourceId) => void {
   const sourceRequests = new Map<RuntimeSourceId, number>()
   return (sourceId) => {
@@ -244,10 +255,14 @@ export async function* runOfficialLiveInvestigation(input: InvestigationInput, r
     return
   }
 
-  const { Solari } = await import("@solarisdk/browser")
-  const { SolariClient } = await import("@solarisdk/sdk")
-  const browserClient = new Solari({ apiKey: process.env.SOLARI_API_KEY })
-  const sandboxClient = new SolariClient({ apiKey: process.env.SOLARI_API_KEY })
+  let clients: Awaited<ReturnType<typeof createSolariClients>>
+  try {
+    clients = await createSolariClients(process.env.SOLARI_API_KEY)
+  } catch {
+    yield update("failed", "Live official-data investigation failed safely while initializing the Solari runtime. No source facts were added.")
+    return
+  }
+  const { browserClient, sandboxClient } = clients
   let browserSessionRef: string | undefined
   let sandboxRef: string | undefined
   let sandbox: Awaited<ReturnType<typeof sandboxClient.sandboxes.create>> | undefined
