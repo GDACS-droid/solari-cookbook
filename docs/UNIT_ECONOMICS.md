@@ -29,13 +29,23 @@ Solari says credits do not roll over, top-ups do not expire, and new resources s
 
 Report a range and pricing timestamp, not a timeless number. Also report `cost_per_100_properties`, cache ratio, and source calls so cost improvements are auditable.
 
-## Initial envelope, not a measured production claim
+## Observed live-run envelope
+
+The successful September 1 official-data run took about **46 seconds end-to-end**: roughly four seconds for Browser launch/catalog verification and roughly 42 seconds for Sandbox creation, 43 MB download, 285 MB expansion, exact-row parse, and join validation. These are application timestamps, not provider billing records.
+
+At Starter list rates, the compute-only estimate is approximately:
+
+`(4/3600 × $0.10) + (42/3600 × $0.057) = $0.00078 per run`, or about **$0.08 per 100 runs** before hosting, storage, egress, retries, paid data, and minimum billing granularity.
+
+The current competition route intentionally re-downloads the DOR archive so Solari's work is visible. Commercial scale should cache by DOR URL + ETag/Last-Modified and batch many parcel lookups in one Sandbox. That changes the unit from “one 43 MB download per property” to “one source revision per county plus cheap indexed lookups.”
+
+## Earlier conservative envelope
 
 At Starter rates, a deliberately conservative one-property run budget of **four Browser minutes plus one minute of a 1 vCPU / 2 GB Sandbox** is:
 
 `(4/60 × $0.10) + (1/60 × $0.057) = $0.00762`, or roughly **$0.76 per 100 investigations** before paid data, proxies, storage, hosting, retries, and idle time. A one-session property-only journey would be lower; a slow/gated source or unclosed session would be higher.
 
-The real-key SDK smoke proved launch/command/cleanup but did not persist provider billing telemetry, so it is not represented as a measured cost. Production must record session open/close timestamps, Sandbox size/runtime, source coverage, cache hits, and the pricing version per run.
+The real live run still did not persist provider billing telemetry. Production must record provider-confirmed session/Sandbox duration, source coverage, archive revision/cache hits, bytes, and pricing version per run.
 
 ## Engineering controls
 

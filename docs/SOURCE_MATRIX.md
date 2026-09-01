@@ -1,34 +1,54 @@
 # Southwest Florida source matrix
 
-Last desk-reconnaissance: 2026-09-01. “Public search” means the entry point was observed, **not** that scraping is authorized. Machine-readable details, source IDs, and unknowns are in [`data/source_registry.yaml`](../data/source_registry.yaml).
+Last verified: 2026-09-01. The machine-readable authority is [`data/source_registry.yaml`](../data/source_registry.yaml). “Public search” is not automation permission; only `PUBLIC_DOWNLOAD`, `OPEN_DATA_API`, `PAID_LICENSE`, or `EXPRESS_PERMISSION` can be production-enabled.
 
-| Geography | Source | Useful signals | Preferred path | Status / caveat |
+## LIVE_READY official chain
+
+| Geography | Source | Basis | Current artifact/API | Product job | Guardrail |
+| --- | --- | --- | --- | --- | --- |
+| Florida / Lee | Florida DOR Property Tax Oversight | `PUBLIC_DOWNLOAD` | `Lee 46 Preliminary NAL 2026.zip`, 43,316,780 compressed bytes, modified 2026-07-27 | current parcel ID, situs, legal, 2026 preliminary assessment and physical facts | Sandbox size/schema validation; omit owner/mailing; preliminary roll is not current tax status or an AVM |
+| Cape Coral / Lee | City Open Data Utility Lien Data | `OPEN_DATA_API` | ArcGIS `OpenData/OpenData/MapServer/6/query` | source-reported active lien status, lien date/reference/amount, STRAP | one exact record; exclude account/customer/name/address fields; historic source date is not “new today” |
+| Lee | County Parcel Address + Locator REST | `OPEN_DATA_API` | official ArcGIS REST locator and parcel query | independent address→STRAP→folio resolution and property facts | exact/privacy-minimized fields only; no aerial imagery; two-request budget |
+| Lee | Property Appraiser free tax-roll downloads | `PUBLIC_DOWNLOAD` | 2026 preliminary county NAL ZIP | county-published bulk backstop | cache by revision; project property facts only; no map/aerial redistribution |
+
+### Verified live result
+
+The production adapter executed this chain on September 1, 2026:
+
+```text
+Solari Browser → official DOR public-data catalog
+Solari Sandbox → DOR 2026 Lee NAL ZIP → exact PARCEL_ID projection
+City Open Data → one exact utility-lien row
+Solari Sandbox → trim(City.Strap) === DOR.PARCEL_ID → evidence manifest
+```
+
+For the public demo parcel, the DOR archive produced one 2026 preliminary record and the City source returned one selected row with `Active_Lien=Y`. The source lien date is February 25, 2022. This is a live status/enrichment path, not a fresh 2026 foreclosure detector.
+
+## Review-required and research sources
+
+| Geography | Source | Potential signals | Basis/status | Cleaner route being pursued |
 | --- | --- | --- | --- | --- |
-| Lee | Business Observer legal notices | Published notice-of-action and foreclosure-sale signals | Exact public artifact; corroborate against court docket | Redacted verified fixture only; it is not a government docket and live automation stays default-deny pending terms review |
-| Lee | Clerk official records | Lis pendens, deeds, mortgages, liens, satisfactions, assignments | Clerk bulk subscription, then lawful portal | Public search and paid daily images/indices observed; automation terms require review |
-| Lee | Clerk court inquiry / foreclosure registry | Circuit civil filings, foreclosure calendars/registry | Weekly registry/report; court portal | Public access observed; case/docs access level and automation need gating |
-| Lee | Clerk foreclosure & tax-deed sales | Scheduled/cancelled sales, tax deed sale signals | Official sale/calendar path | Public page observed; exact feed/API not yet verified |
-| Lee | Property Appraiser / GeoView | STRAP, site/mailing address, legal, assessed data, sales, building/GIS | Official property/GIS lookup | Public search/GIS observed; maps/aerials cannot be commercially redistributed |
-| Lee | Tax Collector | Delinquency / certificates / tax payment status | Official source when a documented lookup/export is confirmed | Candidate only; live adapter not represented as complete |
-| Lee | County code enforcement / permits | Open/closed violations, unsafe structures, permit status | Official open-data/API when identified | Reconnaissance pending; no automation claim |
-| Charlotte | Clerk / official records | Recorded docs, liens, deeds, mortgages, lis pendens | Official index/bulk if approved | Official responsibility confirmed; portal details must be reverified |
-| Charlotte | Property Appraiser | Parcel/folio, values, ownership, characteristics | Official property/GIS lookup | Candidate; endpoint/terms review needed |
-| Charlotte | Tax Collector / LienHub | Delinquent tax certificate & tax deed signals, lands available | Tax Collector / declared auction provider | Tax collector directs users to LienHub; commercial/third-party terms need review |
-| Charlotte | Clerk tax-deed sale | Scheduled sale / cancellation | Official clerk sale system | Candidate; required adapter reconnaissance |
-| Collier | Clerk COR Public Access | Official land records: instruments, legal, parties, map search | Official portal | Public index observed; disclaimer says website use is personal-information only—automation is review-required |
-| Collier | Clerk tax deed sales | Tax-deed application notice, upcoming sale | Clerk’s list/search | Public notices observed; not a title search |
-| Collier | Property Appraiser | Parcel, values, property/GIS | Official property appraiser | Public website observed; endpoint/terms review needed |
-| Collier | Growth Management CityView | Permits, status, zoning-related records | Official municipal service | Officially identified by county; data interface not yet verified |
-| Florida | DOR Property Tax Oversight | Assessment roll NAL/NAP/SDF and GIS, historical requests | Published download/request | Official bulk exists; public files omit confidential records and refresh on stated schedule |
-| Florida | Division of Corporations (Sunbiz) | Entity status, entity document number, officer/registered agent records | Public entity lookup | Use only to resolve a property-owning entity; do not create people dossiers |
-| Florida | Court record framework | Access-matrix/legal handling rules | County source of record first | AOSC24-65 requires public replicated/redacted record treatment; bulk transfer is monitored |
-| Federal | FEMA Flood Map Service Center / GIS | Flood zone/reference and disaster declaration context | Official map/API service | Geographic risk context, not a property-condition conclusion |
-| Commercial research only | ATTOM, Regrid, BatchData, AVM/equity vendors | Licensed enrichments, parcel crosswalks, AVM/mortgage signals | Paid licensed API after procurement | Not bundled, not a source of truth, credentials/terms required |
+| Lee | Business Observer legal notices | publication notices | `REVIEW_REQUIRED`; removed from critical live path | licensed feed or official Clerk bulk/event source |
+| Lee | Clerk official records | lis pendens, deed, mortgage, lien, satisfaction | `REVIEW_REQUIRED`; paid daily images/indices and extracts advertised | procure/review bulk agreement |
+| Lee | Clerk court inquiry | foreclosure case/docket/calendar | `REVIEW_REQUIRED` | official paid civil/comprehensive extracts or express API permission |
+| Lee | Clerk foreclosure/tax deed sales | schedule/cancel/postpone/title | `REVIEW_REQUIRED` | documented official feed/download or express permission |
+| Lee | Property Appraiser interactive search / GeoView | parcel, assessment, sales, GIS | interactive path `REVIEW_REQUIRED`; free bulk/API alternatives are enabled | DOR/Lee free NAL and County ArcGIS API |
+| Lee | Tax Collector | tax balances/certificates/deeds | `REVIEW_REQUIRED` | documented public report/download or licensed feed |
+| Lee | County code/permits | code and permit events | `REVIEW_REQUIRED` pending exact interface | official Lee/Cape Coral open-data layer with tested freshness |
+| Charlotte | Clerk / Appraiser / Tax Collector-LienHub | records, parcel, tax distress | `REVIEW_REQUIRED`; third-party terms unresolved | official bulk/open-data or paid reviewed license |
+| Collier | Clerk COR / tax deed / Appraiser / CityView | records, tax deed, parcel, permits | `REVIEW_REQUIRED` | official bulk/open-data or express permission |
+| Florida | Sunbiz | property-owning entity resolution | `REVIEW_REQUIRED` | narrowly scoped official/express route; never people dossiers |
+| Florida | Court access order AOSC24-65 | compliance rules | `PUBLIC_DOWNLOAD`; policy evidence, not an event adapter | apply to county court-access design |
+| Federal | FEMA MSC/GIS | flood context | `REVIEW_REQUIRED` until exact API route/policy is recorded | official GIS API |
+| Commercial | ATTOM / Regrid / BatchData equivalents | licensed AVM, mortgage, owner/contact enrichment | `PAID_LICENSE`; not procured | separate compliance-reviewed commercial module |
 
-## Lee vertical slice evidence
+## Source-fact discipline
 
-**Observed:** Lee Clerk advertises a paid daily images/indices/plat download option and paid official-record/court extracts; the public court inquiry has capped search results and access-level-dependent documents. The Appraiser offers STRAP/folio/address/owner and recording lookups and GeoView parcel mapping. Florida’s court access order governs public access via replicated/redacted records and says automated bulk transfers are monitored.
+- **Source fact:** exact value returned by DOR or City Open Data with URL, retrieval time, effective date, archive/API record identity, and adapter version.
+- **Calculated:** exact whitespace-trimmed STRAP/PARCEL_ID join, normalization, hash, score component, or snapshot diff.
+- **Inferred:** never promoted without a rule and confidence; the current live brief makes no behavioral inference.
+- **Unavailable:** foreclosure status, current court/auction status, tax balance, lien priority/payoff, mortgage balance, equity, title clearance, and willingness to sell.
 
-**Design inference:** use the Clerk’s documented bulk/report route for detection when procured; use a limited, allow-listed Solari Browser journey for the demonstrable portal investigation only after per-source approval. Resolve to a `county:parcel` identity, retain `case_number`/`instrument_number`, and attach source URLs—not broad party searches.
+## Operational findings
 
-**Unknowns / gates:** current automated-use allowance, robots directives, practical rate limit, exact subscription agreement, and any authentication flow. Registry fields preserve these as unknown rather than silently green-lighting them.
+The City table's latest active lien date is July 14, 2022; it is valuable current-status enrichment but cannot answer “what new lien appeared today?” The next event-detector milestone is a clearly licensed/official feed with 2026 creation/update timestamps and stable parcel identifiers. Broken or blocked sources remain visible as degraded and never silently substitute fixture facts.

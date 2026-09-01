@@ -15,6 +15,7 @@ export type EventType =
   | "FORECLOSURE_NOTICE_PUBLISHED"
   | "FORECLOSURE_SALE_NOTICE_PUBLISHED"
   | "NEW_LIEN"
+  | "LIEN_STATUS_ACTIVE"
   | "LIEN_RELEASED"
   | "NEW_TAX_DELINQUENCY"
   | "NEW_TAX_DEED_APPLICATION"
@@ -52,6 +53,17 @@ export interface Parcel {
   siteAddress?: string
   normalizedAddress?: string
   legalDescription?: string
+  assessment?: {
+    year: number
+    status: "PRELIMINARY" | "FINAL"
+    justValue: number
+    assessedValue: number
+    taxableValue: number
+    landValue: number
+    actualYearBuilt: number | null
+    livingAreaSquareFeet: number | null
+    landUseCode: string
+  }
 }
 
 export interface OwnerOrEntity {
@@ -190,7 +202,7 @@ export function scoreOpportunity(graph: PropertyGraph, now = new Date()): Opport
     const ageDays = Math.floor((now.getTime() - new Date(event.eventDate).getTime()) / 86_400_000)
     // Future effective dates are not fresh detections. They may be scored by
     // their explicit event family below, but never earn a false recency bonus.
-    if (ageDays >= 0 && ageDays <= 7) add(18, `New ${event.eventType.replaceAll("_", " ").toLowerCase()} signal (${ageDays}d)`, event.eventId)
+    if (event.eventType !== "LIEN_STATUS_ACTIVE" && ageDays >= 0 && ageDays <= 7) add(18, `New ${event.eventType.replaceAll("_", " ").toLowerCase()} signal (${ageDays}d)`, event.eventId)
   }
   if (eventTypes.has("NEW_FORECLOSURE_CASE")) add(16, "Foreclosure case signal")
   if (eventTypes.has("FORECLOSURE_NOTICE_PUBLISHED")) add(10, "Foreclosure notice published")
@@ -198,6 +210,7 @@ export function scoreOpportunity(graph: PropertyGraph, now = new Date()): Opport
   if (eventTypes.has("NEW_LIS_PENDENS")) add(14, "Lis pendens recorded")
   if (eventTypes.has("NEW_TAX_DELINQUENCY")) add(12, "Tax delinquency signal")
   if (eventTypes.has("NEW_LIEN")) add(10, "Recorded lien signal")
+  if (eventTypes.has("LIEN_STATUS_ACTIVE")) add(10, "Municipal lien reported active")
   if (eventTypes.has("AUCTION_SCHEDULED")) add(12, "Auction scheduled")
   if (!graph.events.some((event) => event.match === "EXACT")) unknown.push("Property resolution remains in the review queue")
   if (!eventTypes.has("NEW_TAX_DELINQUENCY") && !eventTypes.has("NEW_TAX_DEED_APPLICATION")) unknown.push("Current tax balance unavailable from this investigation")

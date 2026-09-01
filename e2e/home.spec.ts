@@ -8,26 +8,23 @@ test("shows the daily queue and a property-first evidence brief", async ({ page 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "What changed in Southwest Florida property distress today?" })).toBeVisible();
   await expect(page.getByText("Verified public-record sample")).toBeVisible();
-  await expect(page.getByText("3302 E 3rd St").first()).toBeVisible();
+  await expect(page.getByText("413 SW 26th Ave").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Evidence ledger" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Source readiness, at a glance" })).toBeVisible();
 });
 
 test("has an accessible live-investigation action", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Investigate" })).toBeVisible();
-  await page.getByRole("checkbox", { name: "Use authorized live Solari run" }).check();
-  await expect(page.getByLabel("Demo access token")).toBeVisible();
-  await page.getByLabel("Demo access token").fill("e2e-demo-token");
-  await page.getByRole("button", { name: "Investigate" }).click();
-  await expect(page.getByRole("button", { name: "Investigate" })).toBeVisible();
-  await expect(page.getByText("Solari Browser").first()).toBeVisible();
-  await expect(page.getByText("Solari Sandbox")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Investigate live" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Run live with Solari" })).toBeChecked();
+  await expect(page.getByRole("heading", { name: "Watch the evidence come together" })).toBeVisible();
+  await expect(page.getByText(/Live mode is locked to one approved official-data investigation/)).toBeVisible();
 });
 
 test("replays the verified investigation without claiming it is live", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Investigate" }).click();
+  await page.getByRole("checkbox", { name: "Run live with Solari" }).uncheck();
+  await page.getByRole("button", { name: "Investigate live" }).click();
   await expect(page.getByText("Verified sample replay finished. It does not claim a live Solari session.")).toBeVisible();
   await expect(page.getByText("Verified sample replay complete. Refresh with Live investigation when an authorized Solari run is configured.")).toBeVisible();
   await expect(page.getByLabel("Investigation result")).toContainText("VERIFIED REPLAY RESULT");

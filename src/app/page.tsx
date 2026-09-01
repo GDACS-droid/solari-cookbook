@@ -24,7 +24,7 @@ type StreamPayload = Partial<InvestigationStep> & {
   replayStatus?: "recording_requested" | "available_later";
   clearlyLabeledReplay?: boolean;
   graph?: {
-    property: { siteAddress?: string; candidateId?: string; parcelId?: string };
+    property: { siteAddress?: string; candidateId?: string; parcelId?: string; countyParcelId?: string; strap?: string; legalDescription?: string; assessment?: { year: number; status: string; justValue: number; assessedValue: number; taxableValue: number; landValue: number; actualYearBuilt: number | null; livingAreaSquareFeet: number | null; landUseCode: string } };
     events: Array<{ eventId: string; eventType: string; eventDate: string; confidence: string; match: string }>;
     evidence: Array<{ evidenceId: string; sourceId: string; sourceUrl: string; retrievedAt: string; confidence: string }>;
   };
@@ -38,33 +38,30 @@ type StreamPayload = Partial<InvestigationStep> & {
 };
 
 const property = {
-  address: "3302 E 3rd St, Lehigh Acres, FL 33936",
-  shortAddress: "3302 E 3rd St",
-  parcel: "35-44-27-09-00035.001B",
-  case: "26-CA-001793",
+  address: "413 SW 26th Ave, Cape Coral, FL 33991",
+  shortAddress: "413 SW 26th Ave",
+  parcel: "174423C3039260170",
+  case: "CAPE-CORAL-UTILITY-LIEN",
 };
 
 const sampleSteps: InvestigationStep[] = [
-  { id: "lee-business-observer-notice-of-action", source: "Legal notice — notice of action", surface: "Direct", status: "pending", detail: "Replay the May 8 public notice artifact" },
-  { id: "lee-business-observer-foreclosure-sale", source: "Legal notice — foreclosure sale", surface: "Direct", status: "pending", detail: "Replay the Aug 28 public notice artifact" },
-  { id: "lee-community-development-permit-report", source: "Lee County permit report", surface: "Direct", status: "pending", detail: "Replay the official May 2021 permit artifact" },
+  { id: "florida_dor_property_tax_data", source: "Florida DOR — 2026 Lee roll", surface: "Direct", status: "pending", detail: "Replay the privacy-minimized official parcel projection" },
+  { id: "cape_coral_open_data_utility_liens", source: "Cape Coral — Utility Lien Open Data", surface: "Direct", status: "pending", detail: "Replay the verified active-lien source row" },
   { id: "normalization", source: "Evidence normalization", surface: "Review", status: "pending", detail: "Replay the saved normalized graph and score" },
 ];
 
 const liveSteps: InvestigationStep[] = [
-  { id: "lee-clerk-matrix", source: "Lee Clerk — Circuit Civil", surface: "Browser", status: "pending", detail: "Confirm public case evidence" },
-  { id: "lee-property-appraiser", source: "Lee Property Appraiser", surface: "Browser", status: "pending", detail: "Resolve the address crosswalk" },
-  { id: "lee-tax-collector", source: "Lee Tax Collector", surface: "Browser", status: "pending", detail: "Check availability; do not assert an unverified tax balance" },
-  { id: "lee-business-observer-notice-of-action", source: "Legal notice — notice of action", surface: "Browser", status: "pending", detail: "Check redacted case/property markers without recording the page" },
-  { id: "lee-business-observer-foreclosure-sale", source: "Legal notice — foreclosure sale", surface: "Browser", status: "pending", detail: "Check redacted sale markers without recording the page" },
-  { id: "normalization", source: "Evidence normalization", surface: "Sandbox", status: "pending", detail: "Normalize, deduplicate, and score" },
+  { id: "florida_dor_property_tax_data", source: "Florida DOR public-data catalog", surface: "Browser", status: "pending", detail: "Verify the official public-download source" },
+  { id: "florida-dor-lee-nal", source: "DOR 2026 Lee NAL roll", surface: "Sandbox", status: "pending", detail: "Download, validate, unzip, and project one parcel" },
+  { id: "cape_coral_open_data_utility_liens", source: "Cape Coral Utility Lien Open Data", surface: "Direct", status: "pending", detail: "Fetch one exact privacy-minimized lien record" },
+  { id: "normalization", source: "Exact parcel join + evidence manifest", surface: "Sandbox", status: "pending", detail: "Validate STRAP join, provenance, and transparent score" },
 ];
 
 const sourceHealth = [
-  ["Public legal notices", "Aug 31", "Verified fixture", "2"],
-  ["Lee permit report", "Aug 31", "Verified fixture", "0"],
+  ["Florida DOR 2026 Lee roll", "Sep 1", "LIVE_READY", "0 new · 1 parcel"],
+  ["Cape Coral Utility Lien Open Data", "Sep 1", "LIVE_READY", "0 new · 1 active"],
+  ["Lee parcel ArcGIS API", "Sep 1", "LIVE_READY", "0 new"],
   ["Lee Clerk Matrix", "Not run", "Gated", "—"],
-  ["Lee Property Appraiser", "Not run", "Gated", "—"],
   ["Lee Tax Collector", "Not run", "Research", "—"],
 ];
 
@@ -82,7 +79,7 @@ function Status({ status }: { status: InvestigationStep["status"] }) {
 }
 
 export default function Home() {
-  const [steps, setSteps] = useState(sampleSteps);
+  const [steps, setSteps] = useState(liveSteps);
   const [running, setRunning] = useState(false);
   const [runNote, setRunNote] = useState("Ready for a fresh, source-by-source check.");
   const [replayUrl, setReplayUrl] = useState<string | undefined>();
@@ -90,7 +87,6 @@ export default function Home() {
   const [signup, setSignup] = useState<"idle" | "sending" | "success" | "unavailable">("idle");
   const abortRef = useRef<AbortController | null>(null);
   const liveInputRef = useRef<HTMLInputElement | null>(null);
-  const liveTokenRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -100,8 +96,8 @@ export default function Home() {
     const stageId = payload.stage === "normalizing" || payload.stage === "review_required" ? "normalization" : undefined;
     const id = payload.id ?? stageId ?? payload.sourceId ?? payload.source?.toLowerCase().replace(/[^a-z]+/g, "-");
     if (!id) return;
-    const source = payload.source ?? (id === "lee-clerk-court-cases" || id === "lee-clerk-matrix" ? "Lee Clerk — Circuit Civil" : id === "lee-property-appraiser" ? "Lee Property Appraiser" : id === "lee-tax-collector" ? "Lee Tax Collector" : id === "lee-business-observer-notice-of-action" ? "Legal notice — notice of action" : id === "lee-business-observer-foreclosure-sale" ? "Legal notice — foreclosure sale" : id === "lee-community-development-permit-report" ? "Lee County permit report" : id === "normalization" ? "Evidence normalization" : "Investigation source");
-    const surface = payload.surface ?? (id === "normalization" || payload.sandboxId ? "Sandbox" : id === "lee-clerk-court-cases" || id === "lee-clerk-matrix" || id === "lee-property-appraiser" || id === "lee-tax-collector" || id === "lee-business-observer-notice-of-action" || id === "lee-business-observer-foreclosure-sale" ? "Browser" : "Review");
+    const source = payload.source ?? (id === "florida_dor_property_tax_data" ? "Florida DOR public-data catalog" : id === "florida-dor-lee-nal" ? "DOR 2026 Lee NAL roll" : id === "cape_coral_open_data_utility_liens" ? "Cape Coral Utility Lien Open Data" : id === "normalization" ? "Exact parcel join + evidence manifest" : "Investigation source");
+    const surface = payload.surface ?? (id === "normalization" || id === "florida-dor-lee-nal" || payload.sandboxId ? "Sandbox" : id === "florida_dor_property_tax_data" ? "Browser" : id === "cape_coral_open_data_utility_liens" ? "Direct" : "Review");
     const status = payload.status ?? (payload.stage === "complete" ? "complete" : payload.stage === "review_required" ? "warning" : payload.stage === "failed" || payload.stage === "configuration_required" ? "failed" : "running");
     setSteps((current) => {
       const existing = current.find((item) => item.id === id || item.source === source);
@@ -147,7 +143,6 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
           Accept: "text/event-stream, application/json",
-          ...(liveMode && liveTokenRef.current?.value ? { "x-acrebrief-live-token": liveTokenRef.current.value } : {}),
         },
         body: JSON.stringify({ mode: liveMode ? "live" : "verified_sample", caseNumber: property.case, propertyAddress: property.address }),
         signal: controller.signal,
@@ -235,18 +230,18 @@ export default function Home() {
           <aside className="verification-card" aria-label="Data mode">
             <span className="tiny-label">DATA MODE</span>
             <strong><span className="verified-dot" /> Verified public-record sample</strong>
-            <p>Demonstration fixture, last checked Aug 31. Run a live investigation to fetch fresh source evidence.</p>
+            <p>Verified official-data snapshot. Press Investigate for a fresh DOR + City Open Data + Solari run.</p>
           </aside>
         </div>
       </section>
 
       <section id="today" className="wrap summary" aria-labelledby="today-heading">
-        <div className="section-heading"><div><span className="tiny-label">VERIFIED FIXTURE</span><h2 id="today-heading">Acquisition investigation queue</h2></div><span className="as-of">Snapshot retrieved: Aug 31, 2026</span></div>
+        <div className="section-heading"><div><span className="tiny-label">OFFICIAL-DATA SNAPSHOT</span><h2 id="today-heading">Acquisition investigation queue</h2></div><span className="as-of">Last live verification: Sep 1, 2026</span></div>
         <div className="metrics" aria-label="Daily property distress summary">
-          <div><strong>2</strong><span>public-record signals</span></div>
-          <div><strong>1</strong><span>candidate property brief</span></div>
-          <div><strong>3</strong><span>evidence artifacts</span></div>
-          <div><strong>3</strong><span>important unknowns</span></div>
+          <div><strong>1</strong><span>active municipal-lien signal</span></div>
+          <div><strong>1</strong><span>exact parcel resolution</span></div>
+          <div><strong>2</strong><span>official source artifacts</span></div>
+          <div><strong>4</strong><span>important unknowns</span></div>
         </div>
       </section>
 
@@ -255,35 +250,35 @@ export default function Home() {
         <article className="property-card">
           <div className="rank">01</div>
           <div className="property-main">
-            <div className="card-kicker"><span className="new-chip">SAMPLE</span> Legal notice published · Aug 28</div>
+            <div className="card-kicker"><span className="new-chip">OFFICIAL DATA</span> City source currently marks utility lien active</div>
             <h3>{property.shortAddress}</h3>
-            <p>Lehigh Acres, Florida <span aria-hidden="true">·</span> Permit-era parcel ref. {property.parcel}</p>
-            <div className="signal-row"><span><Mark /> Foreclosure case signal</span><span><Mark /> Auction scheduled</span><span><Mark kind="warn" /> Candidate property join</span></div>
+            <p>Cape Coral, Florida <span aria-hidden="true">·</span> DOR parcel {property.parcel}</p>
+            <div className="signal-row"><span><Mark /> Active municipal-lien row</span><span><Mark /> Exact STRAP match</span><span><Mark /> 2026 DOR roll</span></div>
           </div>
-          <div className="score-block"><span className="tiny-label">OPPORTUNITY</span><strong>46</strong><span className="confidence medium">Medium confidence</span></div>
+          <div className="score-block"><span className="tiny-label">INVESTIGATION</span><strong>10</strong><span className="confidence high">High confidence</span></div>
           <a className="investigate-link" href="#investigate">Review brief <Mark kind="arrow" /></a>
         </article>
       </section>
 
       <section id="investigate" className="detail wrap" aria-labelledby="brief-heading">
         <div className="detail-header">
-          <div><span className="tiny-label">EVIDENCE-BACKED BRIEF · {property.case}</span><h2 id="brief-heading">{property.address}</h2><p>Property-centric investigation. No contact enrichment is displayed.</p></div>
-          <div className="investigate-control"><label className="live-switch"><input ref={liveInputRef} id="live-mode" type="checkbox" /> <span>Use authorized live Solari run</span></label><label className="token-field" htmlFor="live-token">Demo access token<input ref={liveTokenRef} id="live-token" type="password" autoComplete="off" placeholder="Required for paid live runs" /></label><button className="primary-button" onClick={investigate} disabled={running} aria-describedby="investigate-status">{running ? "Investigating…" : "Investigate"}<Mark kind="arrow" /></button><small>Default: clearly labeled verified-sample replay. Live runs require a server-approved source policy, Solari key, and demo token; failure never falls back to sample.</small></div>
+          <div><span className="tiny-label">EVIDENCE-BACKED BRIEF · OFFICIAL OPEN DATA</span><h2 id="brief-heading">{property.address}</h2><p>Property-centric investigation. Owner, account, mailing, and contact fields are excluded.</p></div>
+          <div className="investigate-control"><label className="live-switch"><input ref={liveInputRef} id="live-mode" type="checkbox" defaultChecked /> <span>Run live with Solari</span></label><button className="primary-button" onClick={investigate} disabled={running} aria-describedby="investigate-status">{running ? "Investigating…" : "Investigate live"}<Mark kind="arrow" /></button><small>Live mode is locked to one approved official-data investigation. Turn it off for the clearly labeled verified replay; failures never fall back silently.</small></div>
         </div>
 
         <div className="brief-grid">
           <div className="brief-content">
             <section className="facts-panel" aria-labelledby="facts-heading">
-              <div className="panel-title"><span className="panel-number">01</span><h3 id="facts-heading">Property facts</h3><span>Candidate crosswalk</span></div>
-              <dl className="facts-grid"><div><dt>Permit-era parcel ref.</dt><dd>{property.parcel}</dd></div><div><dt>County</dt><dd>Lee</dd></div><div><dt>Site address</dt><dd>{property.address}</dd></div><div><dt>Resolution</dt><dd>Candidate / medium confidence</dd></div><div><dt>Legal description</dt><dd>E 1/2 Lot 1 Block 35 Unit 9</dd></div><div><dt>Not asserted</dt><dd>Current assessor ID, value, tax balance</dd></div></dl>
+              <div className="panel-title"><span className="panel-number">01</span><h3 id="facts-heading">Property facts</h3><span>Source facts · DOR 2026 preliminary</span></div>
+              <dl className="facts-grid"><div><dt>DOR parcel / STRAP</dt><dd>{property.parcel}</dd></div><div><dt>County</dt><dd>Lee</dd></div><div><dt>Site address</dt><dd>{property.address}</dd></div><div><dt>Resolution</dt><dd>Exact / high confidence</dd></div><div><dt>2026 preliminary just value</dt><dd>$238,922</dd></div><div><dt>Built / living area</dt><dd>2005 · 2,545 sq ft</dd></div></dl>
             </section>
 
             <section className="timeline-panel" aria-labelledby="timeline-heading">
               <div className="panel-title"><span className="panel-number">02</span><h3 id="timeline-heading">Event timeline</h3><span>Publication and observed dates</span></div>
               <ol className="timeline">
-                <li><time>May 08</time><div><strong>Foreclosure case signal detected</strong><p>Case {property.case} is associated with this candidate property join. Confirm against the court docket before acting.</p><a href="https://legals.businessobserverfl.com/news/2026/may/08/26-01775l/" target="_blank" rel="noreferrer">Legal-notice evidence <Mark kind="arrow" /></a></div></li>
-                <li><time>Aug 28</time><div><strong>Auction scheduled</strong><p>Legal notice gives a scheduled auction date of Sep 17. This is a public notice, not proof of current sale status.</p><a href="https://legals.businessobserverfl.com/news/2026/aug/28/26-03493l/" target="_blank" rel="noreferrer">Notice evidence <Mark kind="arrow" /></a></div></li>
-                <li><time>May 18 ’21</time><div><strong>Permit report crosswalk</strong><p>Official permit report aligns on address and legal reference; its parcel reference is not asserted as a current assessor identifier.</p><a href="https://www.leegov.com/dcd/rpts/Documents/LehighPermits/2021/May/LA2021MayBPR.PDF" target="_blank" rel="noreferrer">Lee County permit report <Mark kind="arrow" /></a></div></li>
+                <li><time>Feb 25 ’22</time><div><strong>Municipal utility lien recorded</strong><p>The City source currently reports this selected row as active. The date is the source lien date—not a claim that the lien is new today.</p><a href="https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/6" target="_blank" rel="noreferrer">City Open Data source <Mark kind="arrow" /></a></div></li>
+                <li><time>Jan 01 ’26</time><div><strong>2026 preliminary assessment record</strong><p>Florida DOR publishes an exact parcel row for the same STRAP. Just value is an assessment source fact, not an AVM or equity estimate.</p><a href="https://www.floridarevenue.com/property/Pages/DataPortal_RequestAssessmentRollGISData.aspx" target="_blank" rel="noreferrer">Florida DOR catalog <Mark kind="arrow" /></a></div></li>
+                <li><time>Sep 01 ’26</time><div><strong>Exact cross-source parcel join</strong><p>Calculated: the trimmed City STRAP exactly equals the DOR PARCEL_ID. No address-only or LLM-imagined join is promoted.</p></div></li>
               </ol>
             </section>
 
@@ -291,16 +286,16 @@ export default function Home() {
               <div className="panel-title"><span className="panel-number">03</span><h3 id="evidence-heading">Evidence ledger</h3><span>Every claim has a trace</span></div>
               <div className="evidence-table" role="table" aria-label="Evidence ledger">
                 <div role="row" className="evidence-head"><span role="columnheader">Source</span><span role="columnheader">Observed</span><span role="columnheader">Retrieval</span><span role="columnheader">Confidence</span></div>
-                <div role="row"><span role="cell"><strong>Legal notice</strong><small>Case {property.case}</small></span><span role="cell">Foreclosure &amp; auction signal</span><span role="cell">Aug 31 · 11:00 ET</span><span role="cell"><span className="confidence high">High</span></span></div>
-                <div role="row"><span role="cell"><strong>Lee County permit report</strong><small>RES2020-09004</small></span><span role="cell">Address / legal crosswalk</span><span role="cell">Aug 31 · 11:00 ET</span><span role="cell"><span className="confidence high">High</span></span></div>
+                <div role="row"><span role="cell"><strong>Florida DOR NAL</strong><small>Lee 46 · 2026 preliminary</small></span><span role="cell">Parcel / assessment facts</span><span role="cell">Sep 1 · live-ready</span><span role="cell"><span className="confidence high">High</span></span></div>
+                <div role="row"><span role="cell"><strong>Cape Coral Open Data</strong><small>Utility lien record</small></span><span role="cell">Active-lien source fact</span><span role="cell">Sep 1 · live-ready</span><span role="cell"><span className="confidence high">High</span></span></div>
               </div>
-              <p className="caption">Source facts are distinct from scoring. Evidence URLs open the exact public artifact; the legal notices are not a county-hosted docket. Review originals before outreach or an offer.</p>
+              <p className="caption">Source facts are distinct from calculations and inferences. The public demo excludes owners, account numbers, customers, mailing addresses, and contact data. Review originals and title evidence before acting.</p>
             </section>
           </div>
 
           <aside className="brief-aside">
-            <section className="score-card" aria-labelledby="score-heading"><span className="tiny-label">PRELIMINARY SCORE</span><div><strong id="score-heading">46</strong><span className="confidence medium">Medium confidence</span></div><p>Decision support, not a finding of distress, equity, title condition, or willingness to sell.</p><ul><li><b>+18</b> Recent auction-scheduled signal (4d)</li><li><b>+16</b> Foreclosure case signal</li><li><b>+12</b> Auction scheduled</li></ul><div className="unknown"><strong>Unknown</strong><p>Current assessor parcel ID, tax balance, mortgage payoff, and equity are unavailable in this public-record sample.</p></div></section>
-            <section className="unresolved-card"><span className="tiny-label">REVIEW QUEUE</span><h3>Candidate property join</h3><p>Legal-notice address/legal and the permit report align. Resolve to the current assessor parcel before promoting this candidate as a property fact.</p><span className="review-state"><Mark kind="warn" /> Official assessor confirmation required</span></section>
+            <section className="score-card" aria-labelledby="score-heading"><span className="tiny-label">PRELIMINARY SCORE</span><div><strong id="score-heading">10</strong><span className="confidence high">High confidence</span></div><p>Decision support, not a finding of equity, title condition, current payoff, or willingness to sell.</p><ul><li><b>+10</b> Active municipal-lien source signal</li></ul><div className="unknown"><strong>Unavailable</strong><p>Foreclosure/court status, tax balance, lien priority, mortgage payoff, equity, title clearance, and seller intent were not established.</p></div></section>
+            <section className="unresolved-card"><span className="tiny-label">CALCULATED</span><h3>Exact parcel join</h3><p>City STRAP equals Florida DOR PARCEL_ID after whitespace trim. Both sources return the same property identifier; no owner matching was used.</p><span className="review-state"><Mark /> High-confidence property resolution</span></section>
           </aside>
         </div>
       </section>
@@ -315,10 +310,10 @@ export default function Home() {
       </section>
 
       <section id="operations" className="operations wrap" aria-labelledby="operations-heading">
-        <div className="section-heading"><div><span className="tiny-label">OPERATIONS</span><h2 id="operations-heading">Source readiness, at a glance</h2></div><p className="sample-note">Observed fixture state — unrun sources are never shown as healthy.</p></div>
+        <div className="section-heading"><div><span className="tiny-label">OPERATIONS</span><h2 id="operations-heading">Source readiness, at a glance</h2></div><p className="sample-note">Only affirmative public-download/open-data sources can be LIVE_READY.</p></div>
         <div className="operations-table" role="table" aria-label="Source health">
           <div className="operations-row header" role="row"><span role="columnheader">Source</span><span role="columnheader">Last check</span><span role="columnheader">Status</span><span role="columnheader">New events</span></div>
-          {sourceHealth.map(([source, check, health, events]) => <div className="operations-row" role="row" key={source}><span role="cell"><strong>{source}</strong></span><span role="cell">{check}</span><span role="cell"><span className={`health ${health === "Verified fixture" ? "healthy" : "degraded"}`}><Mark kind={health === "Verified fixture" ? "check" : "warn"} />{health}</span></span><span role="cell">{events}</span></div>)}
+          {sourceHealth.map(([source, check, health, events]) => <div className="operations-row" role="row" key={source}><span role="cell"><strong>{source}</strong></span><span role="cell">{check}</span><span role="cell"><span className={`health ${health === "LIVE_READY" ? "healthy" : "degraded"}`}><Mark kind={health === "LIVE_READY" ? "check" : "warn"} />{health}</span></span><span role="cell">{events}</span></div>)}
         </div>
       </section>
 

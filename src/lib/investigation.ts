@@ -7,8 +7,8 @@ import { verifiedSampleGraph, verifiedSampleScore } from "@/lib/verified-sample"
 export const investigationInput = z.object({
   mode: z.enum(["live", "verified_sample"]).default("verified_sample"),
   // The initial permitted demo is narrow on purpose: request data never controls a URL.
-  caseNumber: z.literal("26-CA-001793").default("26-CA-001793"),
-  propertyAddress: z.literal("3302 E 3rd St, Lehigh Acres, FL 33936").default("3302 E 3rd St, Lehigh Acres, FL 33936"),
+  caseNumber: z.literal("CAPE-CORAL-UTILITY-LIEN").default("CAPE-CORAL-UTILITY-LIEN"),
+  propertyAddress: z.literal("413 SW 26th Ave, Cape Coral, FL 33991").default("413 SW 26th Ave, Cape Coral, FL 33991"),
 }).strict()
 export type InvestigationInput = z.infer<typeof investigationInput>
 export type InvestigationStage = "queued" | "source" | "normalizing" | "complete" | "review_required" | "configuration_required" | "failed"
@@ -83,9 +83,8 @@ const PROPERTY_EVIDENCE_SOURCES: readonly PropertyEvidenceSource[] = [
 ]
 
 const VERIFIED_SAMPLE_SOURCES = [
-  { sourceId: "lee-business-observer-notice-of-action", label: "May 8 notice of action" },
-  { sourceId: "lee-business-observer-foreclosure-sale", label: "August 28 foreclosure-sale notice" },
-  { sourceId: "lee-community-development-permit-report", label: "May 2021 Lee County permit report" },
+  { sourceId: "florida_dor_property_tax_data", label: "Florida DOR 2026 preliminary Lee parcel record" },
+  { sourceId: "cape_coral_open_data_utility_liens", label: "City Open Data active utility-lien record" },
 ] as const
 
 const allowedOrigin = (url: string) => {
@@ -101,6 +100,7 @@ const approvedSourceIds = () => new Set(
 )
 
 const update = (stage: InvestigationStage, message: string, extras: Omit<InvestigationUpdate, "stage" | "message" | "at"> = {}): InvestigationUpdate => ({ stage, message, at: new Date().toISOString(), ...extras })
+const publicRunRef = (kind: "browser" | "sandbox", value: string) => `${kind}_${createHash("sha256").update(value).digest("hex").slice(0, 12)}`
 
 export function assertApprovedNavigation(requestedUrl: string, finalUrl: string): void {
   const requested = new URL(requestedUrl)
@@ -220,7 +220,7 @@ export async function* runLiveInvestigation(input: InvestigationInput): AsyncGen
     // unnecessary personal information even when the requested page is public.
     if (approvedPortalSources.length) {
       const browser = await solari.launch({ recording: false, retries: 1, probe: true })
-      sessionId = browser.id
+      sessionId = publicRunRef("browser", browser.id)
       try {
         const page = await browser.newPage()
         for (const source of approvedPortalSources) {
@@ -243,6 +243,7 @@ export async function* runLiveInvestigation(input: InvestigationInput): AsyncGen
     }
 
     const evidenceBrowser = await solari.launch({ recording: false, retries: 1, probe: true })
+    const evidenceBrowserRef = publicRunRef("browser", evidenceBrowser.id)
     try {
       const page = await evidenceBrowser.newPage()
       for (const source of approvedPropertySources) {
@@ -256,7 +257,7 @@ export async function* runLiveInvestigation(input: InvestigationInput): AsyncGen
           const markerMatches = Object.fromEntries(source.markers.map((marker) => [marker.name, body.includes(marker.value)]))
           const allMarkersMatched = Object.values(markerMatches).every(Boolean)
           observations.push({
-            evidenceId: `live_${evidenceBrowser.id}_${source.sourceId}`,
+            evidenceId: `live_${evidenceBrowserRef}_${source.sourceId}`,
             sourceId: source.sourceId,
             sourceUrl: source.url,
             retrievedAt: new Date().toISOString(),
@@ -283,7 +284,7 @@ export async function* runLiveInvestigation(input: InvestigationInput): AsyncGen
     const graph = assembleLiveGraph(input, observations, propertyEvidenceSucceeded)
     const sandbox = await runSolariSandbox(graph)
     const score: OpportunityScore = { ...sandbox.score, confidence: "LOW", unknown: [...sandbox.score.unknown, "Current court and sale status were not corroborated by an approved official county source in this run"] }
-    yield update("review_required", `Live publication verification reached ${completedSources}/${approvedPortalSources.length + approvedPropertySources.length} reviewed sources. Official county corroboration is still required; no recording was created and no official status is implied.`, { graph, score, sessionId, sandboxId: sandbox.sandboxId })
+    yield update("review_required", `Live publication verification reached ${completedSources}/${approvedPortalSources.length + approvedPropertySources.length} reviewed sources. Official county corroboration is still required; no recording was created and no official status is implied.`, { graph, score, sessionId, sandboxId: publicRunRef("sandbox", sandbox.sandboxId) })
   } catch (error) {
     yield update("failed", error instanceof Error ? `Live investigation failed safely: ${error.message}` : "Live investigation failed safely.", { sessionId })
   } finally { await solari.close() }

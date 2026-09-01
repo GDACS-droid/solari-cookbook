@@ -2,55 +2,74 @@
 
 ## Locked goal
 
-Use Solari to make a real Lee County property-distress investigation observable, evidence-backed, and resilient—not to add an unrelated browser demo.
+Use Solari to make a real Lee County property-distress investigation observable, evidence-backed, and safe: current Florida DOR data first, exact municipal event resolution second, and no ambiguous publisher automation in the critical path.
 
-## Capability findings
-
-**Observation (verified in this fork’s upstream examples):** Solari Browser supports cloud browser sessions; a browser profile stores cookies/local storage server-side and requires an explicit save; recording is enabled per session and replay availability can lag release. Sandbox provides an isolated microVM/code-interpreter shape and supports snapshot-based warm work. Desktop provides screenshot/click/type computer use with a live VNC stream. See the upstream [README](../README.md) and `examples/browser-profiles-ts`, `examples/browser-session-recording-py`, `examples/sandbox-*`, and `examples/desktop-computer-use-py`.
-
-**Inference:** County portals are fragmented and often JavaScript-heavy. A single investigation needs an environment that can navigate a permitted portal, retain a lawful authenticated session only when necessary, capture what was observed, and isolate risky document processing.
-
-**Unknown:** Per-source automation permissions, rate limits, robots directives, and which county portals will remain stable are not assumed from public accessibility. The source registry makes these gates explicit.
+## Current live architecture
 
 ```mermaid
 flowchart LR
-  C[County / state public sources] -->|bulk, API, or permitted portal| D[Adapter contract\ndiscover · fetch · normalize · resolve · evidence]
-  D --> G{Access decision}
-  G -->|official bulk/API| Q[Direct retriever]
-  G -->|approved JS portal| B[Solari Browser\nselectors · retry · redacted markers]
-  G -->|legacy GUI only + approved| X[Solari Desktop\nwatchable VNC fallback]
-  G -->|unknown / restricted| H[Human review queue]
-  B -. future .-> R[Opt-in session recording\ndisabled pending retention/redaction controls]
-  B --> P[Persistent profile\nonly authorized portals]
-  Q --> S[Solari Sandbox\nevidence manifest · DQ\nscore cross-check]
-  B --> S
-  X --> S
-  S --> E[Evidence store\nraw reference + hash + retrieval time]
-  S --> N[Normalized property/event graph\nconfidence + unresolved joins]
-  N --> F[Snapshot/diff engine\nnew / changed / resolved]
-  F --> O[Explainable score + brief]
-  E --> O
-  R --> O
-  O --> U[AcreBrief UI\nToday · investigation · operations]
+  U[One reviewed demo property] --> P{Generated source policy}
+  P -->|PUBLIC_DOWNLOAD| B[Solari Browser\nopen DOR catalog\nverify official source]
+  B --> S[Solari Sandbox\ndownload 43 MB DOR NAL ZIP]
+  S --> Z[ZIP security gate\n1 exact entry · no traversal/encryption\n60 MB compressed / 400 MB expanded caps]
+  Z --> C[RFC-4180 CSV parser\nrequired-header + schema fingerprint\nexact-one PARCEL_ID lookup\nprivacy projection]
+  P -->|OPEN_DATA_API| M[City Cape Coral Open Data\none exact utility-lien row\ncontact/account fields excluded]
+  C --> J[Solari Sandbox exact join\ntrim STRAP = PARCEL_ID\nschema + evidence hash]
+  M --> J
+  J --> G[Property event graph\nsource facts · calculated join\nconfidence · unavailable facts]
+  G --> Q[Transparent score + brief]
+  Q --> UI[AcreBrief UI\nstreamed source status + evidence]
+  P -->|REVIEW_REQUIRED| H[Human/source-authorization queue]
 ```
 
-## Why each surface exists
+## Why each Solari surface exists
 
-| Solari surface | Job in AcreBrief | Guardrails | Current use |
+| Surface | Job | Current evidence | Guardrails |
 | --- | --- | --- | --- |
-| Browser | Read an explicitly approved public portal, preserve privacy-safe page-presence evidence, and verify exact redacted case/property markers | No CAPTCHA/access-control bypass; access token; single concurrency; default-deny source allow-list; property pages unrecorded | SDK/account smoke passed against `example.com`; Lee source-specific run remains approval-gated |
-| Sandbox | Validate source-native IDs/evidence counts and independently cross-check the numeric score | No customer secrets in outputs; serialized input; resource/time caps | SDK/account command smoke passed; live-run quality gate compiles; PDF parsing remains future adapter work |
-| Desktop | Last-resort computer-use for a legitimate GUI-only government interface | Requires source approval; visible operator context; never used merely to satisfy a demo or bypass browser restrictions | Deliberately not enabled by default |
-| Persistent profile | Reuse a lawfully authenticated session without putting cookies in the app/database | Explicit owner consent; encrypted provider storage; profile ID is secret; explicit save; deletion policy | Design supported; disabled until a permitted source requires it |
-| Recording | Let a reviewer see what the agent did and bind a run to its collection sequence | Explicit per-session opt-in; asynchronous retrieval; provider retention/deletion plus application review/redaction required | Demonstrated in upstream examples; disabled in AcreBrief until those controls exist |
-| Snapshot | Start processing fast and consistently | Snapshot provenance/version must be retained; no claim that a snapshot is source truth | Supported by Solari, not enabled in the current slice |
+| Browser | visibly navigate and identity-check the official DOR catalog before processing its published artifact | a real September 1 run opened the DOR catalog and passed exact final-origin/path and title checks | non-recorded; one page; no property/person content; no CAPTCHA/auth bypass |
+| Sandbox | isolate untrusted bulk-data handling and prove the exact join independently of the web server | real run downloaded the 43.3 MB ZIP, safely expanded the 285.7 MB CSV, projected one parcel, hashed the archive and full observed schema, and validated the City→DOR join | archive entry/size/encryption/path checks; required unique headers; exact-one parcel; owner/mailing discarded; VM killed on abort and in `finally` |
+| Desktop | legitimate fallback for an approved GUI-only government system | not used; both current sources have better structured routes | never force Desktop for optics or use it to evade access controls |
+| Persistent profile | reuse an explicitly authorized login | not needed; current sources are unauthenticated | profile IDs/secrets never enter app data or git; future use requires consent/deletion lifecycle |
+| Recording | optional judge/operator replay | provider capability confirmed by upstream example; disabled in AcreBrief | retention/deletion and application redaction/review controls are not implemented; generic app demo video is used instead |
+| Snapshot | warm repeatable parsing environment | supported by Solari; not yet enabled | future cache must record template/schema/source revision and cannot masquerade as current source state |
 
-## Adapter contract and failure posture
+## Why this is materially Solari-native
 
-Every source implements a bounded version of `discover(window)`, `fetch(ref)`, `normalize(raw)`, `resolve(record)`, `evidence(record)`, and `healthcheck()`. It emits normalized events plus raw evidence metadata, never an asserted parcel match without confidence.
+The direct City API call is deliberately not forced through a browser. Solari is used where it changes the operational shape:
 
-An adapter failure produces a source-health event and a partial run. It cannot erase old evidence, promote a score, or re-alert unchanged facts. Selector/schema drift is detected by expected-field checks; it routes to review rather than guessing.
+- a judge can watch source-by-source progress rather than trust an opaque batch job;
+- a large untrusted government archive is processed outside the web server;
+- the Sandbox independently enforces schema, join, and evidence-manifest invariants;
+- source failures become isolated streamed status rather than a partially fabricated brief;
+- Browser and Sandbox run references are one-way hashes, not provider session credentials.
 
-## Cost and safety decisions
+The first live run caught a real environment mismatch: the base Sandbox lacks the `unzip` binary. The adapter failed closed, then was corrected to use Python's standard-library ZIP reader with explicit safety checks. The subsequent real run completed end-to-end in roughly 46 seconds. This is runtime proof, not a mocked green check.
 
-Reuse one scoped Browser session for related reads; favor official bulk data; batch Sandbox parsing; cache immutable document references; and record exactly the run status/usage needed for unit economics. See [unit economics](UNIT_ECONOMICS.md) and [security](SECURITY.md).
+## Source policy and adapter boundary
+
+Adapter preference:
+
+1. official API/bulk/public download;
+2. lawful direct structured retrieval;
+3. Solari Browser for an approved interactive portal;
+4. Solari Desktop for an approved GUI-only source;
+5. review queue.
+
+The registry's `access_basis` is compiled into runtime policy. `APPROVED` additionally requires exact HTTPS URLs, reviewer, terms date, expiry, and a positive request budget. Environment variables cannot override a `REVIEW_REQUIRED` source.
+
+Each normalized event uses a source-native stable fingerprint. City lien rows are not keyed by ObjectID alone because the service exhibits duplicate/repeated object values; the event fingerprint includes trimmed STRAP, lien reference, source date, amount, active state, and release state.
+
+## Privacy and fact semantics
+
+The DOR archive contains owner/mailing columns and the City schema contains account/customer/name/service-address columns. AcreBrief reads the bulk archive in the Sandbox but emits only named parcel/property fields. The City query excludes sensitive/unnecessary columns at the request boundary.
+
+The UI labels:
+
+- DOR parcel/assessment values and City status as **source facts**;
+- the exact STRAP/PARCEL_ID match as **calculated**;
+- no current behavioral inference;
+- court, foreclosure, tax balance, lien priority/payoff, equity, title, and seller intent as **unavailable**.
+
+## Cost and reliability
+
+The current one-property competition route combines process-local single concurrency/cooldown with a published Vercel WAF rule limiting `POST /api/investigations` to one request per 60 seconds per IP+JA4 key. Vercel documents WAF counters as regional, so this is stronger bounded-demo protection but not a durable global quota. Worst-case physical request budgets are DOR 4 (one catalog visit + three bounded archive attempts) and City 2 (one query + one transient retry); every attempt consumes and is capped by the generated policy. Redirects are not followed, and stream cancellation triggers remote cleanup with a second cancellation check after each remote resource is created. The 43 MB DOR archive should move to revision-keyed object/cache storage and an atomic global quota before multi-user scale; downloading it per investigation is intentional only for the competition's visible proof. See [unit economics](UNIT_ECONOMICS.md).

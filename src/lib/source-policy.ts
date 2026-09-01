@@ -3,6 +3,7 @@ import { GENERATED_SOURCE_POLICY } from "@/lib/source-policy.generated"
 export type RuntimeSourceId = keyof typeof GENERATED_SOURCE_POLICY
 
 interface RuntimePolicy {
+  accessBasis: "PUBLIC_DOWNLOAD" | "OPEN_DATA_API" | "PAID_LICENSE" | "EXPRESS_PERMISSION" | "REVIEW_REQUIRED"
   automationApproval: "APPROVED" | "REVIEW_REQUIRED"
   exactUrls: readonly string[]
   termsReviewedAt: string | null
@@ -15,6 +16,7 @@ const policies = GENERATED_SOURCE_POLICY as Record<RuntimeSourceId, RuntimePolic
 
 export function sourcePolicyAllows(registrySourceId: RuntimeSourceId, exactUrl: string, now = new Date()): boolean {
   const policy = policies[registrySourceId]
+  if (policy.accessBasis === "REVIEW_REQUIRED") return false
   if (policy.automationApproval !== "APPROVED") return false
   if (!policy.exactUrls.some((url) => url === exactUrl)) return false
   if (!policy.accountableReviewer || !policy.termsReviewedAt || !policy.approvalExpiresAt || policy.maxRequestsPerRun < 1) return false

@@ -1,17 +1,24 @@
-import { investigationInput, replayVerifiedSample, runLiveInvestigation } from "@/lib/investigation"
+import { investigationInput, replayVerifiedSample } from "@/lib/investigation"
+import { runOfficialLiveInvestigation } from "@/lib/official-live"
 import { timingSafeEqual } from "node:crypto"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 300
 
 function sse(event: unknown): Uint8Array {
   return new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`)
 }
 
 let activeLiveRuns = 0
+let lastPublicLiveRunAt = 0
+
+function publicLiveDemoEnabled(): boolean {
+  return process.env.ACREBRIEF_PUBLIC_LIVE_DEMO === "true"
+}
 
 function authorizedLiveRequest(request: Request): boolean {
+  if (publicLiveDemoEnabled()) return true
   const expected = process.env.ACREBRIEF_LIVE_ACCESS_TOKEN
   const provided = request.headers.get("x-acrebrief-live-token")
   if (!expected || !provided) return false
@@ -32,16 +39,27 @@ export async function POST(request: Request): Promise<Response> {
   if (parsed.data.mode === "live" && !authorizedLiveRequest(request)) {
     return Response.json({ error: "A valid demo access token is required for paid live investigations." }, { status: 403 })
   }
+  if (parsed.data.mode === "live" && publicLiveDemoEnabled() && Date.now() - lastPublicLiveRunAt < 60_000) {
+    return Response.json({ error: "The public live demo is cooling down after a recent paid Solari run. Try again in one minute." }, { status: 429, headers: { "Retry-After": "60" } })
+  }
   if (parsed.data.mode === "live" && activeLiveRuns >= 1) {
     return Response.json({ error: "A live investigation is already running. Retry after it completes." }, { status: 429, headers: { "Retry-After": "15" } })
   }
-  if (parsed.data.mode === "live") activeLiveRuns += 1
-  const events = parsed.data.mode === "live" ? runLiveInvestigation(parsed.data) : replayVerifiedSample()
+  if (parsed.data.mode === "live") {
+    activeLiveRuns += 1
+    if (publicLiveDemoEnabled()) lastPublicLiveRunAt = Date.now()
+  }
+  const runAbort = new AbortController()
+  const abortFromRequest = () => runAbort.abort(request.signal.reason)
+  if (request.signal.aborted) abortFromRequest()
+  else request.signal.addEventListener("abort", abortFromRequest, { once: true })
+  const events = parsed.data.mode === "live" ? runOfficialLiveInvestigation(parsed.data, runAbort.signal) : replayVerifiedSample()
   const iterator = events[Symbol.asyncIterator]()
   let released = false
   const release = () => {
     if (released) return
     released = true
+    request.signal.removeEventListener("abort", abortFromRequest)
     if (parsed.data.mode === "live") activeLiveRuns = Math.max(0, activeLiveRuns - 1)
   }
   const stream = new ReadableStream<Uint8Array>({
@@ -58,6 +76,7 @@ export async function POST(request: Request): Promise<Response> {
       }
     },
     async cancel() {
+      runAbort.abort(new Error("Investigation stream cancelled"))
       try { await iterator.return?.(undefined) }
       finally { release() }
     },

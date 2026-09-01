@@ -5,6 +5,7 @@ purpose: >-
   authorization for unattended extraction. An adapter may run only when its
   terms, robots, access controls, rate limits, and data-use purpose are approved.
 field_notes:
+  access_basis: PUBLIC_DOWNLOAD | OPEN_DATA_API | PAID_LICENSE | EXPRESS_PERMISSION | REVIEW_REQUIRED
   confidence: desk_verified | source_declared | candidate | unknown
   adapter_status: enabled_sample | gated | research_only | not_started
   terms_or_use_notes: 'verified wording where known; otherwise explicitly unverified'
@@ -14,6 +15,7 @@ sources:
     jurisdiction: Lee County, FL
     source_name: Business Observer — Lee County Public Legal Notices
     official_url: https://legals.businessobserverfl.com/news/lee/
+    access_basis: REVIEW_REQUIRED
     data_category: [foreclosure, public_legal_notice]
     access_method: public legal-notice pages and weekly publication PDFs; not a county government docket
     api_available: false
@@ -47,6 +49,7 @@ sources:
     jurisdiction: Lee County, FL
     source_name: Lee County Clerk — Official Records
     official_url: https://www.leeclerk.org/departments/official-records-services/search-official-records
+    access_basis: REVIEW_REQUIRED
     data_category: [official_records, recorded_documents]
     access_method: public portal; paid daily images/indices/plat FTP and annual extract available by request
     api_available: unknown
@@ -71,6 +74,7 @@ sources:
     jurisdiction: Lee County, FL
     source_name: Lee County Clerk — Court Records Inquiry
     official_url: https://matrix.leeclerk.org/home/index
+    access_basis: REVIEW_REQUIRED
     data_category: [court_case, foreclosure, hearing_calendar]
     access_method: public JavaScript portal; paid civil/comprehensive case extracts advertised
     api_available: unknown
@@ -102,6 +106,7 @@ sources:
     jurisdiction: Lee County, FL
     source_name: Lee County Clerk — Foreclosure and Tax Deed Sales
     official_url: https://www.leeclerk.org/departments/courts/foreclosure-tax-deed-sales
+    access_basis: REVIEW_REQUIRED
     data_category: [foreclosure, auction_event, tax_event]
     access_method: public page and linked sale/calendar systems
     api_available: unknown
@@ -126,6 +131,7 @@ sources:
     jurisdiction: Lee County, FL
     source_name: Lee County Property Appraiser — Real Property Search
     official_url: https://www.leepa.org/Search/PropertySearch.aspx
+    access_basis: REVIEW_REQUIRED
     data_category: [property, parcel, assessment, sale_history]
     access_method: public lookup by STRAP, folio, address, owner, recording data
     api_available: unknown
@@ -157,6 +163,7 @@ sources:
     jurisdiction: Lee County, FL
     source_name: Lee County Property Appraiser — GeoView GIS
     official_url: https://www.leepa.org/GIS/UsingGeoView.aspx
+    access_basis: REVIEW_REQUIRED
     data_category: [gis, parcel, flood_zoning_context]
     access_method: public ESRI web map
     api_available: unknown
@@ -181,6 +188,7 @@ sources:
     jurisdiction: Lee County, FL
     source_name: Lee County Tax Collector
     official_url: https://www.leetc.com/
+    access_basis: REVIEW_REQUIRED
     data_category: [tax_event, delinquency, tax_certificate]
     access_method: official site; exact public lookup/export not verified
     api_available: unknown
@@ -212,6 +220,7 @@ sources:
     jurisdiction: Lee County, FL
     source_name: Lee County code enforcement and permitting
     official_url: https://www.leegov.com/dcd/CodeEnforcement
+    access_basis: REVIEW_REQUIRED
     data_category: [code_event, permit_event, municipal_lien]
     access_method: official service; endpoint/interface reconnaissance pending
     api_available: unknown
@@ -236,6 +245,7 @@ sources:
     jurisdiction: Charlotte County, FL
     source_name: Charlotte County Clerk — Official Records
     official_url: https://www.charlotteclerk.com/
+    access_basis: REVIEW_REQUIRED
     data_category: [official_records, recorded_documents, foreclosure]
     access_method: official clerk search; endpoint to reverify
     api_available: unknown
@@ -260,6 +270,7 @@ sources:
     jurisdiction: Charlotte County, FL
     source_name: Charlotte County Property Appraiser
     official_url: https://www.ccappraiser.com/
+    access_basis: REVIEW_REQUIRED
     data_category: [property, parcel, assessment, sale_history]
     access_method: official lookup; endpoint and terms to reverify
     api_available: unknown
@@ -284,6 +295,7 @@ sources:
     jurisdiction: Charlotte County, FL
     source_name: Charlotte County Tax Collector — Delinquent Tax / LienHub links
     official_url: https://taxcollector.charlottecountyfl.gov/delinquent-tax
+    access_basis: REVIEW_REQUIRED
     data_category: [tax_event, tax_certificate, tax_deed, lands_available]
     access_method: official tax collector page directs certificate auction/search to LienHub and tax-deed system
     api_available: unknown
@@ -308,6 +320,7 @@ sources:
     jurisdiction: Collier County, FL
     source_name: Collier Clerk — COR Public Access
     official_url: https://app.collierclerk.com/CORPublicAccess/
+    access_basis: REVIEW_REQUIRED
     data_category: [official_records, recorded_documents]
     access_method: public JavaScript land-records inquiry
     api_available: unknown
@@ -332,6 +345,7 @@ sources:
     jurisdiction: Collier County, FL
     source_name: Collier Clerk — Tax Deed Sales
     official_url: https://www.collierclerk.com/tax-deed-sales/
+    access_basis: REVIEW_REQUIRED
     data_category: [tax_event, tax_deed, auction_event]
     access_method: public clerk page/upcoming sales list
     api_available: unknown
@@ -356,6 +370,7 @@ sources:
     jurisdiction: Collier County, FL
     source_name: Collier County Property Appraiser
     official_url: https://www.collierappraiser.com/
+    access_basis: REVIEW_REQUIRED
     data_category: [property, parcel, assessment, sale_history]
     access_method: official website/GIS; endpoint to reverify
     api_available: unknown
@@ -380,6 +395,7 @@ sources:
     jurisdiction: Collier County, FL
     source_name: Collier Growth Management / CityView
     official_url: https://www.collier.gov/
+    access_basis: REVIEW_REQUIRED
     data_category: [permit_event, code_event, zoning]
     access_method: official county service identified in records-request guidance
     api_available: unknown
@@ -403,7 +419,8 @@ sources:
   - source_id: florida_dor_property_tax_data
     jurisdiction: Florida statewide
     source_name: Florida Department of Revenue Property Tax Oversight Data Portal
-    official_url: https://floridarevenue.com/property/Pages/DataPortal_RequestAssessmentRollGISData.aspx
+    official_url: https://www.floridarevenue.com/property/Pages/DataPortal_RequestAssessmentRollGISData.aspx
+    access_basis: PUBLIC_DOWNLOAD
     data_category: [assessment, sale_history, gis, statewide_crosswalk]
     access_method: current roll/GIS download; historical data request
     api_available: false
@@ -415,19 +432,121 @@ sources:
     refresh_frequency: preliminary July 1; initial final October; post-certification final; GIS annually after review
     terms_or_use_notes: current public files omit confidential/exempt records; do not attempt to reconstruct them
     robots_notes: unverified
-    rate_limit_notes: unverified
+    rate_limit_notes: maximum four physical requests per live investigation — one catalog navigation plus up to three bounded archive attempts; cache the archive revision before multi-user use
     primary_keys: [county_code, parcel_id]
     date_fields: [assessment_roll_year, sale_date]
     property_identifiers: [county_code, parcel_id, legal_description, situs_address]
     document_types: [nal_roll, nap_roll, sdf_sale_file, parcel_shapefile]
     historical_depth: NAL/NAP 2002-current by request; SDF 2009-current by request; GIS 2005-current by request
     confidence: desk_verified
-    adapter_status: gated
+    adapter_status: live_ready
     last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: APPROVED
+      exact_urls:
+        - https://www.floridarevenue.com/property/Pages/DataPortal_RequestAssessmentRollGISData.aspx
+        - https://www.floridarevenue.com/property/dataportal/Documents/PTO%20Data%20Portal/Tax%20Roll%20Data%20Files/NAL/2026P/Lee%2046%20Preliminary%20NAL%202026.zip
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: '2026-12-01'
+      accountable_reviewer: AcreBrief public-source review
+      max_requests_per_run: 4
+  - source_id: lee_property_appraiser_public_data
+    jurisdiction: Lee County, FL
+    source_name: Lee County Property Appraiser — Free Tax Roll Downloads
+    official_url: https://www.leepa.org/Roll/NalZip.aspx
+    access_basis: PUBLIC_DOWNLOAD
+    data_category: [property, parcel, assessment, bulk_data]
+    access_method: affirmative free public download directory and direct ZIP files
+    api_available: false
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: free public download
+    refresh_frequency: preliminary and final annual tax-roll releases
+    terms_or_use_notes: data services page expressly states free data can be downloaded; project only required parcel/property fields and never redistribute aerial imagery or unnecessary owner/mailing data
+    robots_notes: not required for the direct public download path
+    rate_limit_notes: cache by ETag/Last-Modified; never download per page view
+    primary_keys: [parcel_id, strap, folio_id]
+    date_fields: [assessment_year, sale_year, sale_month]
+    property_identifiers: [parcel_id, strap, folio_id, situs_address, legal_description]
+    document_types: [nal_roll, sdf_sale_file]
+    historical_depth: current and published prior roll files vary by county page
+    confidence: source_declared
+    adapter_status: live_ready
+    last_verified_at: '2026-09-01'
+  - source_id: lee_county_parcel_open_data_api
+    jurisdiction: Lee County, FL
+    source_name: Lee County GIS — Parcel Address and Locator REST APIs
+    official_url: https://gismapserver.leegov.com/gisserver910/rest/services/Layers/ParcelAddress/MapServer/0
+    access_basis: OPEN_DATA_API
+    data_category: [property, parcel, assessment, gis_crosswalk]
+    access_method: unauthenticated official ArcGIS REST query endpoints
+    api_available: true
+    bulk_download_available: false
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public API
+    refresh_frequency: county-managed; per-record maintenance metadata available
+    terms_or_use_notes: query only privacy-minimized non-contact fields; no aerial imagery; cache bounded exact-address and exact-STRAP queries
+    robots_notes: structured ArcGIS REST API; no page scraping
+    rate_limit_notes: two requests per investigation; one locator and one exact parcel query
+    primary_keys: [strap, folio_id]
+    date_fields: [maintenance_date, last_edited_date]
+    property_identifiers: [strap, folio_id, site_address, legal_description]
+    document_types: [parcel_record, address_candidate]
+    historical_depth: current service state; exact history not represented
+    confidence: source_declared
+    adapter_status: live_ready
+    last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: APPROVED
+      exact_urls:
+        - https://gismapserver.leegov.com/gisserver910/rest/services/Locators/LeeLocator/GeocodeServer/findAddressCandidates
+        - https://gismapserver.leegov.com/gisserver910/rest/services/Layers/ParcelAddress/MapServer/0/query
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: '2026-12-01'
+      accountable_reviewer: AcreBrief public-source review
+      max_requests_per_run: 2
+  - source_id: cape_coral_open_data_utility_liens
+    jurisdiction: Cape Coral, Lee County, FL
+    source_name: City of Cape Coral Open Data — Utility Lien Data
+    official_url: https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/6
+    access_basis: OPEN_DATA_API
+    data_category: [municipal_lien, property_distress, code_event]
+    access_method: City-published ArcGIS Open Data query API
+    api_available: true
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public open-data API
+    refresh_frequency: live City-maintained service; source event dates are historical and must not be relabeled as detection dates
+    terms_or_use_notes: City GIS page expressly directs users to downloadable department-maintained Open Data; query only parcel key, lien status/date/amount/reference, and omit account/customer/name/address fields
+    robots_notes: structured City Open Data API; no page scraping
+    rate_limit_notes: maximum two exact bounded record-query attempts per investigation; retry only transient transport/408/429/5xx failures and stop on schema, redirect, or authorization errors
+    primary_keys: [object_id, strap, lien_number]
+    date_fields: [date_liened, lien_release_date]
+    property_identifiers: [strap]
+    document_types: [utility_lien, lien_release]
+    historical_depth: source service contains historical rows; exact depth not asserted
+    confidence: source_declared
+    adapter_status: live_ready
+    last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: APPROVED
+      exact_urls:
+        - https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/6/query
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: '2026-12-01'
+      accountable_reviewer: AcreBrief public-source review
+      max_requests_per_run: 2
   - source_id: florida_sunbiz
     jurisdiction: Florida statewide
     source_name: Florida Division of Corporations — Sunbiz
     official_url: https://search.sunbiz.org/
+    access_basis: REVIEW_REQUIRED
     data_category: [entity_resolution, judgment_lien]
     access_method: public entity/document search
     api_available: unknown
@@ -452,6 +571,7 @@ sources:
     jurisdiction: Florida statewide
     source_name: Florida Supreme Court AOSC24-65
     official_url: https://supremecourt.flcourts.gov/content/download/2440532/file/AOSC24-65.pdf
+    access_basis: PUBLIC_DOWNLOAD
     data_category: [compliance, court_record_access]
     access_method: governing order / policy source
     api_available: false
@@ -476,6 +596,7 @@ sources:
     jurisdiction: Federal
     source_name: FEMA Flood Map Service Center / GIS services
     official_url: https://msc.fema.gov/
+    access_basis: REVIEW_REQUIRED
     data_category: [flood_zone, disaster_context, geographic_risk]
     access_method: official map/service lookup
     api_available: true
@@ -500,6 +621,7 @@ sources:
     jurisdiction: Commercial research only
     source_name: ATTOM, Regrid, BatchData, AVM/equity providers
     official_url: https://www.attomdata.com/
+    access_basis: PAID_LICENSE
     data_category: [enrichment, avm, parcel_crosswalk, mortgage_signal]
     access_method: licensed commercial API after procurement
     api_available: unknown

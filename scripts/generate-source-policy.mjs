@@ -9,6 +9,7 @@ const registry = parse(await readFile(registryPath, "utf8"))
 if (!registry || !Array.isArray(registry.sources)) throw new Error("Source registry must contain a sources array")
 
 const policy = {}
+const productionAccessBases = new Set(["PUBLIC_DOWNLOAD", "OPEN_DATA_API", "PAID_LICENSE", "EXPRESS_PERMISSION"])
 for (const source of registry.sources) {
   if (!source.runtime_policy) continue
   const item = source.runtime_policy
@@ -20,11 +21,13 @@ for (const source of registry.sources) {
     if (parsed.protocol !== "https:") throw new Error(`${source.source_id} contains a non-HTTPS runtime URL`)
   }
   if (item.automation_approval === "APPROVED") {
+    if (!productionAccessBases.has(source.access_basis)) throw new Error(`${source.source_id} cannot be APPROVED with access_basis ${source.access_basis ?? "missing"}`)
     if (!item.accountable_reviewer || !item.terms_reviewed_at || !item.approval_expires_at || !(item.max_requests_per_run > 0)) {
       throw new Error(`${source.source_id} cannot be APPROVED without reviewer, terms date, expiry, and a positive request budget`)
     }
   }
   policy[source.source_id] = {
+    accessBasis: source.access_basis,
     automationApproval: item.automation_approval,
     exactUrls: item.exact_urls,
     termsReviewedAt: item.terms_reviewed_at ?? null,

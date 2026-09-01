@@ -1,50 +1,70 @@
 # AcreBrief
 
-**Finding a pre-foreclosure is easy. Understanding whether it deserves an acquisition team's time can mean checking five county systems. AcreBrief does that investigation automatically.**
+**Finding a distressed-property signal is easy. Understanding whether the property deserves an acquisition team's time can require five government systems. AcreBrief does that investigation automatically.**
 
-`2 verified public-record signals → 1 evidence-backed property brief`
+`City municipal-lien signal → exact Florida DOR parcel → evidence-backed brief`
 
-![AcreBrief evidence-backed property investigation dashboard](assets/screenshots/acrebrief-desktop.png)
+![AcreBrief official-data property investigation dashboard](assets/screenshots/acrebrief-desktop.png)
 
-[Watch the 72-second verified-fixture walkthrough](assets/demo/acrebrief-demo.mp4) · The live Solari version uses the same UI only after credentials and source approvals are configured.
+[Open the live product](https://acrebrief.com) · [Watch the 60–90 second walkthrough](assets/demo/acrebrief-demo.mp4)
 
-[Open the public verified-sample preview](https://acrebrief-preview.vercel.app) — no login or Solari credentials required.
+AcreBrief is event-driven public-record property intelligence for Southwest Florida. It monitors lawful primary sources, resolves events to parcels, preserves evidence, and explains what is known, calculated, inferred, and unavailable. It is decision support—not a title opinion, valuation, or claim that anybody wants to sell.
 
-AcreBrief is an evidence-first, event-driven public-record property intelligence product for Southwest Florida. It watches lawful public sources for changes, resolves them to a parcel, and creates a concise investigation brief with source links, confidence, and an explainable score. It is decision support—not a claim that an owner is distressed, willing to sell, or that a title is clear.
+## The live proof
 
-> **Competition build status:** Lee County is the vertical slice. The product has a **verified-sample** mode for a safe, reproducible public demo and an **authorized live** mode that requires a Solari key, a demo access token, and an explicit server-side source allow-list. A live run is deliberately fail-closed when a property-specific source is unavailable, unapproved, or needs review; portal reachability alone never produces a property result.
+Press **Investigate live** on the Cape Coral property. AcreBrief performs a real, bounded run:
 
-## The question it answers
+1. **Solari Browser** opens Florida DOR's official assessment-roll catalog and verifies source identity.
+2. **Solari Sandbox** downloads DOR's current 43 MB `2026P` Lee NAL archive, checks the ZIP entry and size ceilings, decompresses 285 MB in isolation, validates unique required headers, fingerprints the observed 165-column schema, rejects duplicate parcel rows, and emits one privacy-minimized parcel record.
+3. The server queries one exact record from the **City of Cape Coral Utility Lien Open Data API**, excluding customer, account, owner, mailing, and contact fields at retrieval.
+4. **Solari Sandbox** independently verifies `trim(City.Strap) === DOR.PARCEL_ID`, hashes the evidence manifest, and rejects a non-exact join.
+5. AcreBrief renders the source facts, historic event date, transparent score, and material unknowns.
+
+The current City row is live-retrieved and marked active by its source; its source lien date is February 2022. AcreBrief does **not** relabel it “new today.” The run demonstrates a real official-data investigation and exact parcel resolution while a fresh affirmatively licensed foreclosure detector remains the next source milestone.
+
+The critical live route depends only on sources classified `PUBLIC_DOWNLOAD` or `OPEN_DATA_API`. Business Observer and unapproved Clerk/browser sources remain `REVIEW_REQUIRED` and are never opened by this path.
+
+## The customer question
 
 > **What changed in Southwest Florida property distress today, and which properties are actually worth investigating?**
 
-Instead of another contact list, AcreBrief is a parcel event graph:
+The product's canonical unit is a parcel event graph:
 
 ```text
-public record change → court/record reference → parcel resolution → corroborating facts
-                    → evidence timeline → explainable opportunity score → human decision
+official event → exact property key → independent parcel source → evidence timeline
+               → transparent score → unresolved questions → human decision
 ```
 
-Every fact carries a source URL, retrieval time, event/effective date, raw and normalized values when applicable, confidence, and adapter version. Uncertain matches stay uncertain and enter review; an LLM is never allowed to turn a weak address/party match into a confident property assertion.
+Every fact keeps its source URL, retrieval time, effective date, raw privacy-minimized value, normalized value, confidence, evidence reference, and adapter version. Address-only matches remain candidates; only exact native parcel identifiers become high-confidence joins.
 
 ## Why Solari is material
 
-AcreBrief uses Solari as the operating substrate for the hard parts of a live investigation:
+- **Browser** makes official source discovery and catalog verification observable. The current run uses a short, non-recorded DOR session; recording remains disabled until retention/deletion and replay review controls exist.
+- **Sandbox** does the expensive, security-sensitive work: untrusted archive validation, decompression, 165-column CSV parsing, privacy projection, schema checks, exact cross-source joins, evidence hashing, and score-manifest validation in an isolated microVM.
+- **Desktop** is reserved for an approved GUI-only government source. It is not used for an API or to bypass access controls.
+- **Persistent profiles** are supported by Solari but intentionally unused because this official path is unauthenticated.
 
-- **Browser** works enabled JavaScript-heavy public portals when a documented API/bulk export is not available and can capture reviewed evidence without persisting full page text.
-- **Persistent profiles** preserve an explicitly authorized portal session when one is required. They are never committed or exposed in the public UI.
-- **Sandbox** currently validates the fresh evidence manifest and independently cross-checks the numeric score in an isolated microVM. Bounded PDF parsing is the next adapter stage, not a capability this slice pretends has already run.
-- **Recording** is a demonstrated Solari capability but is disabled in AcreBrief’s current live path until provider retention/deletion and application review/redaction controls exist. Sandbox snapshots are likewise a documented optimization path, not enabled in this slice.
-- **Desktop** is intentionally a constrained fallback for a legacy GUI that cannot be reasonably accessed through permitted browser/API retrieval. It is not used to bypass access controls or CAPTCHA.
+See [Solari architecture](docs/SOLARI_ARCHITECTURE.md) and [unit economics](docs/UNIT_ECONOMICS.md).
 
-The detailed design and capability evidence are in [Solari architecture](docs/SOLARI_ARCHITECTURE.md).
+## Source policy
 
-## What a reviewer can do
+`data/source_registry.yaml` is the machine-readable authority. Every source has:
 
-1. Open the dashboard and see newly detected Lee County sample events ranked by priority.
-2. Open a property to see its event timeline, unknowns, derived score components, and independent source evidence.
-3. Press **Investigate** to watch the run fan out across enabled sources. With `SOLARI_API_KEY`, this uses the live Solari workflow; without it, the clearly labelled verified sample remains available for review.
-4. Submit a pilot request. The form captures interest only; it does not invent pilots, testimonials, or usage.
+```yaml
+access_basis: PUBLIC_DOWNLOAD | OPEN_DATA_API | PAID_LICENSE | EXPRESS_PERMISSION | REVIEW_REQUIRED
+```
+
+Only the first four can be production-approved. Generated runtime policy additionally requires exact HTTPS URLs, an accountable reviewer, a terms-review date, an expiry, and a positive per-run request budget. CI rejects drift between the YAML and generated TypeScript policy.
+
+Current `LIVE_READY` chain:
+
+| Source | Access basis | Job |
+| --- | --- | --- |
+| Florida DOR 2026 preliminary Lee NAL | `PUBLIC_DOWNLOAD` | current official parcel and assessment facts |
+| Cape Coral Utility Lien Open Data | `OPEN_DATA_API` | active municipal-lien source status and source event date |
+| Lee County parcel/locator REST | `OPEN_DATA_API` | independent exact parcel/address lookup, available as corroboration |
+
+See the [source matrix](docs/SOURCE_MATRIX.md) for the review-required alternatives and caveats.
 
 ## Quick start
 
@@ -58,54 +78,38 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Visit `http://localhost:3000`. The default public configuration is `NEXT_PUBLIC_DEMO_MODE=verified-sample`.
-
-To enable an eligible live investigation surface, its generated runtime policy must first be `APPROVED` in `data/source_registry.yaml` with exact URLs, reviewer, expiry, terms-review date, and request budget. The build rejects policy drift. Only then set a real `SOLARI_API_KEY`, a long `ACREBRIEF_LIVE_ACCESS_TOKEN`, and the matching registry ID in `ACREBRIEF_APPROVED_SOURCE_IDS`. The public route is single-concurrency and token-gated so anonymous visitors cannot spend the deployment’s Solari balance. Do not put secrets in `NEXT_PUBLIC_*`, commit them, share a profile, or use them to evade a source's terms, CAPTCHA, login requirement, rate limits, or confidentiality restrictions.
+The verified official-data replay works without credentials. A live run requires `SOLARI_API_KEY`. The public competition deployment additionally opts into the locked one-property route with `ACREBRIEF_PUBLIC_LIVE_DEMO=true`; other environments remain token-gated. Never put secrets in `NEXT_PUBLIC_*`.
 
 ```bash
 npm run verify
 npm run test:e2e
 ```
 
-## Architecture
+Verified locally on September 1, 2026: source-policy drift check, lint, TypeScript, 31 unit/integration tests, production build, 6 desktop/mobile E2E tests, and a real Solari Browser + Sandbox run that completed the DOR→City exact parcel join.
 
-The current vertical slice deliberately prefers official sources and permits:
+## Safety and limits
 
-1. official API/bulk/download where documented and authorized;
-2. direct structured retrieval where terms and implementation permit it;
-3. Solari Browser for an enabled public portal;
-4. Solari Desktop only where a legitimate GUI-only path warrants it;
-5. a human-review queue otherwise.
+- No CAPTCHA bypass, authentication evasion, publisher scraping, broad party search, or mass outreach.
+- No owner, customer, account, mailing, phone, or email fields in the public graph.
+- The DOR roll is preliminary and assessment just value is not an AVM, current market price, or equity estimate.
+- A City `Active_Lien=Y` field is evidence of what the source currently reports—not lien priority, enforceability, payoff, title condition, current tax delinquency, or seller intent.
+- Scores triage investigation effort. Missing data remains explicitly unavailable and never becomes zero.
 
-See [source matrix](docs/SOURCE_MATRIX.md), the machine-readable [source registry](data/source_registry.yaml), and the [sample investigation brief](docs/SAMPLE_INVESTIGATION_REPORT.md).
+Read [privacy and compliance](docs/PRIVACY_AND_COMPLIANCE.md), [security](docs/SECURITY.md), and the [sample official-data report](docs/SAMPLE_INVESTIGATION_REPORT.md).
 
-## Data provenance and limits
+## Commercial thesis
 
-- A search page being public is **not** proof that unattended automated extraction is permitted. Registry entries explicitly mark terms/robots/rate limits as verified, unknown, or review-required.
-- An official record or county site may be incomplete, delayed, corrected, or legally non-authoritative. AcreBrief preserves the original source reference; it does not replace title, legal, valuation, or tax due diligence.
-- Public demos are property-centered and omit private contact enrichment. No cold-SMS or outreach automation is in scope.
-- Scores measure investigation priority from the available evidence. They are not valuations, credit decisions, title opinions, or predictions of behavior.
+Primary users are acquisition teams, investor/broker teams, wholesalers, and property-data organizations. The wedge is not “another pre-foreclosure list.” It is:
 
-Read the full [privacy and compliance posture](docs/PRIVACY_AND_COMPLIANCE.md) and [security model](docs/SECURITY.md).
+> **AcreBrief autonomously investigates changes across fragmented primary sources, resolves them into a parcel event graph, preserves the proof, and surfaces the few records worth a human's next hour.**
 
-## Product and commercial thesis
-
-Primary users are acquisition teams, investor/broker teams, wholesalers, and property-data organizations. The wedge is not “we have pre-foreclosure data.” It is: **we autonomously investigate a change across fragmented primary sources, attach the proof, and surface only the few changes worth a human’s next hour.**
-
-The product definition, pricing hypothesis, personas, and metrics are in [Product](docs/PRODUCT.md). We explicitly contrast this thesis with existing platforms in [competitive analysis](docs/COMPETITIVE_ANALYSIS.md).
+Pilot hypothesis: **$499/seat/month** for daily briefs, live investigations, evidence export, watchlists, and review queues. No pilots, testimonials, or usage are fabricated. See [Product](docs/PRODUCT.md) and [competitive analysis](docs/COMPETITIVE_ANALYSIS.md).
 
 ## Challenge basis
 
-This implementation was created for the Pinetree Research / Solari build challenge referenced in the supplied posts by Harry Chow: [post 1](https://x.com/harrychow_/status/2094521275586691410) and [post 2](https://x.com/harrychow_/status/2094437473912844480). The exact official Solari repository basis is [`solari-sdk/solari-cookbook`](https://github.com/solari-sdk/solari-cookbook); this repository is its fork (`GDACS-droid/solari-cookbook`) with AcreBrief added at the root. The upstream remote is retained for auditability.
-
-## Demo and launch materials
+Built for the Pinetree Research / Solari challenge referenced by Harry Chow ([post 1](https://x.com/harrychow_/status/2094521275586691410), [post 2](https://x.com/harrychow_/status/2094437473912844480)). The exact official basis is [`solari-sdk/solari-cookbook`](https://github.com/solari-sdk/solari-cookbook); this repository is its public fork with the upstream remote retained.
 
 - [60–90 second demo script](docs/DEMO_SCRIPT.md)
-- [Launch copy (draft; do not publish without approval)](docs/LAUNCH_COPY.md)
-- [Decisions and known questions](docs/DECISIONS.md)
-
-## Repository safety
-
-Secrets, browser profiles, cookies, database credentials, and evidence containing sensitive information must not be committed. Review `.env.example`, the [security checklist](docs/SECURITY.md), and `git log --all -- . ':!node_modules'` before any public release.
-
-MIT licensed upstream examples remain available under `examples/`.
+- [Launch copy—draft only; do not publish without approval](docs/LAUNCH_COPY.md)
+- [Architecture and decisions](docs/SOLARI_ARCHITECTURE.md)
+- [Build log](docs/BUILD_LOG.md)
