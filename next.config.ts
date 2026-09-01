@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   // Node external. Bundle the Solari clients themselves so Vercel does not
   // have to resolve Next's hashed external-package symlinks at invocation.
   serverExternalPackages: ["patchright-core"],
+  // Patchright loads this manifest through a computed filesystem path, which
+  // Next's static file tracer cannot infer from the external package.
+  outputFileTracingIncludes: {
+    "/api/investigations": ["./node_modules/patchright-core/browsers.json"],
+  },
   async headers() {
     return [{
       source: "/:path*",
