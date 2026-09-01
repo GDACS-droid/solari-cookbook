@@ -1,6 +1,16 @@
 node_modules/
-package-lock.json
+.next/
+.vercel/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
 .env
+.env.*
+!.env.example
+artifacts/private/
+artifacts/replays/
 __pycache__/
 *.pyc
 .venv/

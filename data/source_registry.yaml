@@ -1,0 +1,491 @@
+registry_version: 1
+last_reconnaissance_at: '2026-09-01'
+purpose: >-
+  Candidate lawful public-record sources for AcreBrief. Public availability is not
+  authorization for unattended extraction. An adapter may run only when its
+  terms, robots, access controls, rate limits, and data-use purpose are approved.
+field_notes:
+  confidence: desk_verified | source_declared | candidate | unknown
+  adapter_status: enabled_sample | gated | research_only | not_started
+  terms_or_use_notes: 'verified wording where known; otherwise explicitly unverified'
+sources:
+  - source_id: lee_business_observer_legal_notices
+    jurisdiction: Lee County, FL
+    source_name: Business Observer — Lee County Public Legal Notices
+    official_url: https://legals.businessobserverfl.com/news/lee/
+    data_category: [foreclosure, public_legal_notice]
+    access_method: public legal-notice pages and weekly publication PDFs; not a county government docket
+    api_available: false
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public access observed
+    refresh_frequency: weekly publication; individual pages dated by publication
+    terms_or_use_notes: exact notices may be used as redacted demo evidence; automated live retrieval remains default-deny until publisher terms are reviewed
+    robots_notes: unverified
+    rate_limit_notes: unverified; no production automation approval recorded
+    primary_keys: [notice_id, case_number]
+    date_fields: [publication_date, scheduled_sale_date]
+    property_identifiers: [property_address, legal_description, case_number]
+    document_types: [notice_of_action, notice_of_foreclosure_sale]
+    historical_depth: searchable archive observed; exact depth unknown
+    confidence: desk_verified
+    adapter_status: enabled_sample
+    last_verified_at: '2026-09-01'
+  - source_id: lee_clerk_official_records
+    jurisdiction: Lee County, FL
+    source_name: Lee County Clerk — Official Records
+    official_url: https://www.leeclerk.org/departments/official-records-services/search-official-records
+    data_category: [official_records, recorded_documents]
+    access_method: public portal; paid daily images/indices/plat FTP and annual extract available by request
+    api_available: unknown
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public search; paid services advertised (confirm current agreement)
+    refresh_frequency: daily service advertised; portal frequency unknown
+    terms_or_use_notes: public-record access observed; automation/subscription terms not yet reviewed
+    robots_notes: unverified
+    rate_limit_notes: unverified; use bounded low-rate access until approved
+    primary_keys: [instrument_number, book_page]
+    date_fields: [recording_date]
+    property_identifiers: [legal_description, parcel_reference_when_present, party_names]
+    document_types: [lis_pendens, mortgage, satisfaction, deed, quitclaim_deed, lien, release, assignment, judgment]
+    historical_depth: unknown
+    confidence: desk_verified
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: lee_clerk_court_records
+    jurisdiction: Lee County, FL
+    source_name: Lee County Clerk — Court Records Inquiry
+    official_url: https://matrix.leeclerk.org/home/index
+    data_category: [court_case, foreclosure, hearing_calendar]
+    access_method: public JavaScript portal; paid civil/comprehensive case extracts advertised
+    api_available: unknown
+    bulk_download_available: true
+    browser_required: true
+    desktop_required: false
+    authentication_required: false
+    cost: public inquiry; paid extracts advertised
+    refresh_frequency: portal current; extract schedule to confirm
+    terms_or_use_notes: documents vary by public access level under court access matrix
+    robots_notes: unverified
+    rate_limit_notes: search results capped at 500; practical rate limit unverified
+    primary_keys: [case_number]
+    date_fields: [filing_date, docket_date, hearing_date]
+    property_identifiers: [property_address_when_in_complaint, legal_description_when_present]
+    document_types: [mortgage_foreclosure_complaint, judgment, docket_entry, hearing, certificate_of_title]
+    historical_depth: cases before 2004 may require records request
+    confidence: desk_verified
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: lee_clerk_foreclosure_tax_deed
+    jurisdiction: Lee County, FL
+    source_name: Lee County Clerk — Foreclosure and Tax Deed Sales
+    official_url: https://www.leeclerk.org/departments/courts/foreclosure-tax-deed-sales
+    data_category: [foreclosure, auction_event, tax_event]
+    access_method: public page and linked sale/calendar systems
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: true
+    desktop_required: false
+    authentication_required: false
+    cost: unknown
+    refresh_frequency: weekly registry report observed; sale feed cadence unknown
+    terms_or_use_notes: Clerk disclaims title/encumbrance/condition warranties; do not present sale as clear title
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [case_number, sale_id_when_present]
+    date_fields: [sale_date, cancellation_date, report_date]
+    property_identifiers: [legal_description, parcel_reference_when_present, address_when_present]
+    document_types: [foreclosure_sale, tax_deed_sale, cancellation, postponement]
+    historical_depth: unknown
+    confidence: desk_verified
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: lee_property_appraiser
+    jurisdiction: Lee County, FL
+    source_name: Lee County Property Appraiser — Real Property Search
+    official_url: https://www.leepa.org/Search/PropertySearch.aspx
+    data_category: [property, parcel, assessment, sale_history]
+    access_method: public lookup by STRAP, folio, address, owner, recording data
+    api_available: unknown
+    bulk_download_available: reports available; bulk terms/pricing to confirm
+    browser_required: true
+    desktop_required: false
+    authentication_required: false
+    cost: public lookup
+    refresh_frequency: site current; assessment updates follow county roll cycle
+    terms_or_use_notes: facts may be reviewed/retrieved; maps/aerials/images licensed for public personal non-business use and must not be commercially redistributed
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [strap, folio_id]
+    date_fields: [sale_date, assessment_year]
+    property_identifiers: [strap, folio_id, site_address, mailing_address, legal_description]
+    document_types: [property_record, trim_notice]
+    historical_depth: sale/prior strap shown; exact depth unknown
+    confidence: desk_verified
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: lee_property_appraiser_geoview
+    jurisdiction: Lee County, FL
+    source_name: Lee County Property Appraiser — GeoView GIS
+    official_url: https://www.leepa.org/GIS/UsingGeoView.aspx
+    data_category: [gis, parcel, flood_zoning_context]
+    access_method: public ESRI web map
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: true
+    desktop_required: false
+    authentication_required: false
+    cost: public viewer
+    refresh_frequency: unknown
+    terms_or_use_notes: map is not a legal survey; no commercial redistribution of aerial/map imagery in public demo
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [strap_when_queryable]
+    date_fields: []
+    property_identifiers: [parcel_geometry, strap]
+    document_types: [map_layer]
+    historical_depth: aerial history visible; licensing/use must be respected
+    confidence: desk_verified
+    adapter_status: research_only
+    last_verified_at: '2026-09-01'
+  - source_id: lee_tax_collector
+    jurisdiction: Lee County, FL
+    source_name: Lee County Tax Collector
+    official_url: https://www.leetc.com/
+    data_category: [tax_event, delinquency, tax_certificate]
+    access_method: official site; exact public lookup/export not verified
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: unknown
+    desktop_required: false
+    authentication_required: unknown
+    cost: unknown
+    refresh_frequency: unknown
+    terms_or_use_notes: unverified
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [parcel_id_unknown]
+    date_fields: [unknown]
+    property_identifiers: [parcel_id_unknown]
+    document_types: [tax_bill_unknown, tax_certificate_unknown]
+    historical_depth: unknown
+    confidence: candidate
+    adapter_status: not_started
+    last_verified_at: '2026-09-01'
+  - source_id: lee_code_permits
+    jurisdiction: Lee County, FL
+    source_name: Lee County code enforcement and permitting
+    official_url: https://www.leegov.com/dcd/CodeEnforcement
+    data_category: [code_event, permit_event, municipal_lien]
+    access_method: official service; endpoint/interface reconnaissance pending
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: unknown
+    desktop_required: false
+    authentication_required: unknown
+    cost: unknown
+    refresh_frequency: unknown
+    terms_or_use_notes: unverified
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [case_id_unknown, permit_id_unknown]
+    date_fields: [unknown]
+    property_identifiers: [address_unknown, parcel_unknown]
+    document_types: [code_case_unknown, permit_unknown]
+    historical_depth: unknown
+    confidence: candidate
+    adapter_status: not_started
+    last_verified_at: '2026-09-01'
+  - source_id: charlotte_clerk_official_records
+    jurisdiction: Charlotte County, FL
+    source_name: Charlotte County Clerk — Official Records
+    official_url: https://www.charlotteclerk.com/
+    data_category: [official_records, recorded_documents, foreclosure]
+    access_method: official clerk search; endpoint to reverify
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: unknown
+    desktop_required: false
+    authentication_required: unknown
+    cost: unknown
+    refresh_frequency: unknown
+    terms_or_use_notes: official records responsibility confirmed; portal/use terms unverified
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [instrument_number_unknown, book_page_unknown]
+    date_fields: [recording_date_unknown]
+    property_identifiers: [legal_description_unknown, parcel_unknown]
+    document_types: [lis_pendens_unknown, deed_unknown, mortgage_unknown, lien_unknown]
+    historical_depth: unknown
+    confidence: candidate
+    adapter_status: not_started
+    last_verified_at: '2026-09-01'
+  - source_id: charlotte_property_appraiser
+    jurisdiction: Charlotte County, FL
+    source_name: Charlotte County Property Appraiser
+    official_url: https://www.ccappraiser.com/
+    data_category: [property, parcel, assessment, sale_history]
+    access_method: official lookup; endpoint and terms to reverify
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: unknown
+    desktop_required: false
+    authentication_required: false
+    cost: unknown
+    refresh_frequency: unknown
+    terms_or_use_notes: unverified
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [parcel_id_unknown]
+    date_fields: [assessment_year_unknown, sale_date_unknown]
+    property_identifiers: [parcel_id_unknown, address_unknown, legal_description_unknown]
+    document_types: [property_record_unknown]
+    historical_depth: unknown
+    confidence: candidate
+    adapter_status: not_started
+    last_verified_at: '2026-09-01'
+  - source_id: charlotte_tax_collector_lienhub
+    jurisdiction: Charlotte County, FL
+    source_name: Charlotte County Tax Collector — Delinquent Tax / LienHub links
+    official_url: https://taxcollector.charlottecountyfl.gov/delinquent-tax
+    data_category: [tax_event, tax_certificate, tax_deed, lands_available]
+    access_method: official tax collector page directs certificate auction/search to LienHub and tax-deed system
+    api_available: unknown
+    bulk_download_available: files/listing advertised
+    browser_required: true
+    desktop_required: false
+    authentication_required: unknown
+    cost: third-party auction/search terms unknown
+    refresh_frequency: delinquency cycle; exact cadence unknown
+    terms_or_use_notes: tax collector content observed; LienHub commercial/automation terms must be separately accepted
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [certificate_id_unknown, parcel_id_unknown]
+    date_fields: [delinquency_year, sale_date_unknown]
+    property_identifiers: [parcel_id_unknown]
+    document_types: [tax_certificate, tax_deed_sale, lands_available]
+    historical_depth: unknown
+    confidence: desk_verified
+    adapter_status: research_only
+    last_verified_at: '2026-09-01'
+  - source_id: collier_clerk_official_records
+    jurisdiction: Collier County, FL
+    source_name: Collier Clerk — COR Public Access
+    official_url: https://app.collierclerk.com/CORPublicAccess/
+    data_category: [official_records, recorded_documents]
+    access_method: public JavaScript land-records inquiry
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: true
+    desktop_required: false
+    authentication_required: false
+    cost: public inquiry
+    refresh_frequency: current index; exact cadence unknown
+    terms_or_use_notes: site permits view/download/print/copy solely for personal information; commercial automated use is not approved
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [instrument_number, book_page]
+    date_fields: [recording_date]
+    property_identifiers: [legal_description, map_search_reference, party_names]
+    document_types: [mortgage, tax_deed, deed, lien, lis_pendens_when_recorded]
+    historical_depth: records after 1981 indexed; imaged records after 2003 described
+    confidence: desk_verified
+    adapter_status: research_only
+    last_verified_at: '2026-09-01'
+  - source_id: collier_clerk_tax_deed
+    jurisdiction: Collier County, FL
+    source_name: Collier Clerk — Tax Deed Sales
+    official_url: https://www.collierclerk.com/tax-deed-sales/
+    data_category: [tax_event, tax_deed, auction_event]
+    access_method: public clerk page/upcoming sales list
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: true
+    desktop_required: false
+    authentication_required: false
+    cost: public page
+    refresh_frequency: notices posted for four consecutive weeks before auction
+    terms_or_use_notes: Clerk says Property Information Report is not title search and disclaims encumbrance accuracy
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [tax_deed_case_id_unknown]
+    date_fields: [auction_date, notice_date]
+    property_identifiers: [legal_description, parcel_reference_when_present]
+    document_types: [tax_deed_application_notice, tax_deed_sale]
+    historical_depth: unknown
+    confidence: desk_verified
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: collier_property_appraiser
+    jurisdiction: Collier County, FL
+    source_name: Collier County Property Appraiser
+    official_url: https://www.collierappraiser.com/
+    data_category: [property, parcel, assessment, sale_history]
+    access_method: official website/GIS; endpoint to reverify
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: unknown
+    desktop_required: false
+    authentication_required: false
+    cost: unknown
+    refresh_frequency: unknown
+    terms_or_use_notes: unverified
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [parcel_id_unknown]
+    date_fields: [assessment_year_unknown, sale_date_unknown]
+    property_identifiers: [parcel_id_unknown, address_unknown, legal_description_unknown]
+    document_types: [property_record_unknown]
+    historical_depth: unknown
+    confidence: candidate
+    adapter_status: not_started
+    last_verified_at: '2026-09-01'
+  - source_id: collier_growth_management_cityview
+    jurisdiction: Collier County, FL
+    source_name: Collier Growth Management / CityView
+    official_url: https://www.collier.gov/
+    data_category: [permit_event, code_event, zoning]
+    access_method: official county service identified in records-request guidance
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: unknown
+    desktop_required: false
+    authentication_required: unknown
+    cost: unknown
+    refresh_frequency: unknown
+    terms_or_use_notes: unverified
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [permit_id_unknown, case_id_unknown]
+    date_fields: [unknown]
+    property_identifiers: [address_unknown, parcel_unknown]
+    document_types: [permit_unknown, code_case_unknown]
+    historical_depth: unknown
+    confidence: source_declared
+    adapter_status: not_started
+    last_verified_at: '2026-09-01'
+  - source_id: florida_dor_property_tax_data
+    jurisdiction: Florida statewide
+    source_name: Florida Department of Revenue Property Tax Oversight Data Portal
+    official_url: https://floridarevenue.com/property/Pages/DataPortal_RequestAssessmentRollGISData.aspx
+    data_category: [assessment, sale_history, gis, statewide_crosswalk]
+    access_method: current roll/GIS download; historical data request
+    api_available: false
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public download/request; request processing may apply
+    refresh_frequency: preliminary July 1; initial final October; post-certification final; GIS annually after review
+    terms_or_use_notes: current public files omit confidential/exempt records; do not attempt to reconstruct them
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [county_code, parcel_id]
+    date_fields: [assessment_roll_year, sale_date]
+    property_identifiers: [county_code, parcel_id, legal_description, situs_address]
+    document_types: [nal_roll, nap_roll, sdf_sale_file, parcel_shapefile]
+    historical_depth: NAL/NAP 2002-current by request; SDF 2009-current by request; GIS 2005-current by request
+    confidence: desk_verified
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: florida_sunbiz
+    jurisdiction: Florida statewide
+    source_name: Florida Division of Corporations — Sunbiz
+    official_url: https://search.sunbiz.org/
+    data_category: [entity_resolution, judgment_lien]
+    access_method: public entity/document search
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: true
+    desktop_required: false
+    authentication_required: false
+    cost: public search
+    refresh_frequency: unknown
+    terms_or_use_notes: use only to resolve a property-owning entity and record entity provenance; avoid unrelated individual profiling
+    robots_notes: unverified
+    rate_limit_notes: unverified
+    primary_keys: [document_number, fei_ein_when_public]
+    date_fields: [filing_date, status_date_when_present]
+    property_identifiers: [entity_name_crosswalk]
+    document_types: [entity_filing, judgment_lien, federal_lien_registration]
+    historical_depth: unknown
+    confidence: desk_verified
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: florida_court_access_order
+    jurisdiction: Florida statewide
+    source_name: Florida Supreme Court AOSC24-65
+    official_url: https://supremecourt.flcourts.gov/content/download/2440532/file/AOSC24-65.pdf
+    data_category: [compliance, court_record_access]
+    access_method: governing order / policy source
+    api_available: false
+    bulk_download_available: false
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: none
+    refresh_frequency: order version controlled
+    terms_or_use_notes: public online access uses replicated/redacted records; automated bulk transfers are monitored
+    robots_notes: not_applicable
+    rate_limit_notes: not_applicable
+    primary_keys: [administrative_order_number]
+    date_fields: [effective_date]
+    property_identifiers: []
+    document_types: [administrative_order]
+    historical_depth: current order only
+    confidence: source_declared
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: fema_flood_msc
+    jurisdiction: Federal
+    source_name: FEMA Flood Map Service Center / GIS services
+    official_url: https://msc.fema.gov/
+    data_category: [flood_zone, disaster_context, geographic_risk]
+    access_method: official map/service lookup
+    api_available: true
+    bulk_download_available: unknown
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public service
+    refresh_frequency: map/service dependent
+    terms_or_use_notes: geographic context only; does not establish a property’s condition, insurability, or value
+    robots_notes: unverified
+    rate_limit_notes: follow published service limits when invoked
+    primary_keys: [fema_panel_id, geographic_coordinates]
+    date_fields: [map_effective_date, disaster_declaration_date]
+    property_identifiers: [parcel_geometry_crosswalk]
+    document_types: [flood_map, disaster_declaration]
+    historical_depth: service dependent
+    confidence: desk_verified
+    adapter_status: gated
+    last_verified_at: '2026-09-01'
+  - source_id: commercial_property_enrichment
+    jurisdiction: Commercial research only
+    source_name: ATTOM, Regrid, BatchData, AVM/equity providers
+    official_url: https://www.attomdata.com/
+    data_category: [enrichment, avm, parcel_crosswalk, mortgage_signal]
+    access_method: licensed commercial API after procurement
+    api_available: unknown
+    bulk_download_available: unknown
+    browser_required: false
+    desktop_required: false
+    authentication_required: true
+    cost: paid; vendor quote and license required
+    refresh_frequency: vendor-dependent
+    terms_or_use_notes: research only; no credential, source permission, or data license is included in this build
+    robots_notes: not_applicable
+    rate_limit_notes: vendor contract dependent
+    primary_keys: [vendor_property_id]
+    date_fields: [vendor_updated_at]
+    property_identifiers: [parcel_id, address, vendor_property_id]
+    document_types: [licensed_enrichment]
+    historical_depth: vendor-dependent
+    confidence: candidate
+    adapter_status: research_only
+    last_verified_at: '2026-09-01'
