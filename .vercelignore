@@ -1,0 +1,26 @@
+.env*
+.git/
+.github/
+.next/
+.vercel/
+node_modules/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log
+artifacts/private/
+artifacts/replays/
+
+# Repository-only research, fixtures, and media are not runtime inputs.
+assets/
+data/
+docs/
+e2e/
+examples/
+scripts/
+AGENTS.md
+CLAUDE.md
+README.md
+playwright.config.ts
+vitest.config.ts
