@@ -18,7 +18,8 @@ data/
 docs/
 e2e/
 examples/
-scripts/
+scripts/*
+!scripts/check-build-trace.mjs
 AGENTS.md
 CLAUDE.md
 README.md
