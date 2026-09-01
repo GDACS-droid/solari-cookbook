@@ -44,13 +44,13 @@ describe("investigation endpoint", () => {
     }
   })
 
-  it("keeps live automation default-deny even with credentials", async () => {
+  it("does not let credentials or an environment ID override a review-required registry source", async () => {
     const previousKey = process.env.SOLARI_API_KEY
     const previousToken = process.env.ACREBRIEF_LIVE_ACCESS_TOKEN
     const previousSources = process.env.ACREBRIEF_APPROVED_SOURCE_IDS
     process.env.SOLARI_API_KEY = "configured-for-source-gate-test"
     process.env.ACREBRIEF_LIVE_ACCESS_TOKEN = "server-only-demo-token"
-    process.env.ACREBRIEF_APPROVED_SOURCE_IDS = ""
+    process.env.ACREBRIEF_APPROVED_SOURCE_IDS = "lee_business_observer_legal_notices"
     try {
       const response = await POST(new Request("http://localhost/api/investigations", { method: "POST", body: JSON.stringify({ mode: "live" }), headers: { "content-type": "application/json", "x-acrebrief-live-token": "server-only-demo-token" } }))
       expect(response.status).toBe(200)

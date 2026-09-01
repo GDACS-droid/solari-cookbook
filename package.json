@@ -17,7 +17,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "demo:record": "node scripts/record-demo.mjs",
-    "verify": "npm run lint && npm run typecheck && npm test && npm run build"
+    "source-policy:generate": "node scripts/generate-source-policy.mjs",
+    "source-policy:check": "node scripts/generate-source-policy.mjs --check",
+    "verify": "npm run source-policy:check && npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
     "@solarisdk/browser": "0.1.2",
@@ -38,6 +40,7 @@
     "eslint-config-next": "16.3.4",
     "jsdom": "29.1.1",
     "typescript": "5.9.2",
-    "vitest": "4.1.11"
+    "vitest": "4.1.11",
+    "yaml": "2.9.0"
   }
 }

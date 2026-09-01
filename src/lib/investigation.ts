@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { createHash } from "node:crypto"
-import { scoreOpportunity, type Evidence, type OpportunityScore, type PropertyGraph } from "@/lib/acrebrief"
+import { fingerprintEvent, normalizeAddress, scoreOpportunity, stableId, type Evidence, type EventType, type OpportunityScore, type PropertyEvent, type PropertyGraph } from "@/lib/acrebrief"
+import { sourcePolicyAllows, sourceRequestBudget, type RuntimeSourceId } from "@/lib/source-policy"
 import { verifiedSampleGraph, verifiedSampleScore } from "@/lib/verified-sample"
 
 export const investigationInput = z.object({
@@ -10,7 +11,7 @@ export const investigationInput = z.object({
   propertyAddress: z.literal("3302 E 3rd St, Lehigh Acres, FL 33936").default("3302 E 3rd St, Lehigh Acres, FL 33936"),
 }).strict()
 export type InvestigationInput = z.infer<typeof investigationInput>
-export type InvestigationStage = "queued" | "source" | "normalizing" | "complete" | "configuration_required" | "failed"
+export type InvestigationStage = "queued" | "source" | "normalizing" | "complete" | "review_required" | "configuration_required" | "failed"
 export interface InvestigationUpdate {
   stage: InvestigationStage
   at: string
@@ -25,24 +26,61 @@ export interface InvestigationUpdate {
   clearlyLabeledReplay?: boolean
 }
 
-export const PERMITTED_LIVE_SOURCES = [
-  { sourceId: "lee-clerk-matrix", url: "https://matrix.leeclerk.org/home/index" },
-  { sourceId: "lee-property-appraiser", url: "https://www.leepa.org/Search/PropertySearch.aspx" },
-  { sourceId: "lee-tax-collector", url: "https://leetc.com/property-taxes/" },
-] as const
+interface PortalSource {
+  sourceId: string
+  registrySourceId: RuntimeSourceId
+  url: string
+}
 
-const PROPERTY_EVIDENCE_SOURCES = [
+interface PropertyEvidenceSource extends PortalSource {
+  sourceRecordId: string
+  eventType: Extract<EventType, "FORECLOSURE_NOTICE_PUBLISHED" | "FORECLOSURE_SALE_NOTICE_PUBLISHED">
+  eventDate: string
+  effectiveDate: string
+  legalDescription: string
+  markers: ReadonlyArray<{ name: string; value: string }>
+}
+
+export const PERMITTED_LIVE_SOURCES: readonly PortalSource[] = [
+  { sourceId: "lee-clerk-matrix", registrySourceId: "lee_clerk_court_records", url: "https://matrix.leeclerk.org/home/index" },
+  { sourceId: "lee-property-appraiser", registrySourceId: "lee_property_appraiser", url: "https://www.leepa.org/Search/PropertySearch.aspx" },
+  { sourceId: "lee-tax-collector", registrySourceId: "lee_tax_collector", url: "https://leetc.com/property-taxes/" },
+]
+
+const PROPERTY_EVIDENCE_SOURCES: readonly PropertyEvidenceSource[] = [
   {
     sourceId: "lee-business-observer-notice-of-action",
+    registrySourceId: "lee_business_observer_legal_notices",
     url: "https://legals.businessobserverfl.com/news/2026/may/08/26-01775l/",
-    markers: ["26-CA-001793", "3302 E 3RD ST, LEHIGH ACRES, FL 33936", "FORECLOSURE OF MORTGAGE", "THE EAST 1/2 OF LOT 1, BLOCK 35"],
+    sourceRecordId: "26-01775L",
+    eventType: "FORECLOSURE_NOTICE_PUBLISHED",
+    eventDate: "2026-05-08",
+    effectiveDate: "2026-05-08",
+    legalDescription: "E 1/2 Lot 1 Block 35 Unit 9",
+    markers: [
+      { name: "case_number", value: "26-CA-001793" },
+      { name: "property_address", value: "3302 E 3RD ST, LEHIGH ACRES, FL 33936" },
+      { name: "notice_type", value: "FORECLOSURE OF MORTGAGE" },
+      { name: "legal_description", value: "THE EAST 1/2 OF LOT 1, BLOCK 35" },
+    ],
   },
   {
     sourceId: "lee-business-observer-foreclosure-sale",
+    registrySourceId: "lee_business_observer_legal_notices",
     url: "https://legals.businessobserverfl.com/news/2026/aug/28/26-03493l/",
-    markers: ["26-CA-001793", "3302 E 3RD ST, LEHIGH ACRES, FL 33936", "17 DAY OF SEPTEMBER, 2026", "THE EAST 1/2 OF LOT 1, BLOCK 35"],
+    sourceRecordId: "26-03493L",
+    eventType: "FORECLOSURE_SALE_NOTICE_PUBLISHED",
+    eventDate: "2026-08-28",
+    effectiveDate: "2026-09-17",
+    legalDescription: "E 1/2 Lot 1 Block 35 Unit 9",
+    markers: [
+      { name: "case_number", value: "26-CA-001793" },
+      { name: "property_address", value: "3302 E 3RD ST, LEHIGH ACRES, FL 33936" },
+      { name: "sale_date", value: "17 DAY OF SEPTEMBER, 2026" },
+      { name: "legal_description", value: "THE EAST 1/2 OF LOT 1, BLOCK 35" },
+    ],
   },
-] as const
+]
 
 const VERIFIED_SAMPLE_SOURCES = [
   { sourceId: "lee-business-observer-notice-of-action", label: "May 8 notice of action" },
@@ -63,6 +101,51 @@ const approvedSourceIds = () => new Set(
 )
 
 const update = (stage: InvestigationStage, message: string, extras: Omit<InvestigationUpdate, "stage" | "message" | "at"> = {}): InvestigationUpdate => ({ stage, message, at: new Date().toISOString(), ...extras })
+
+export function assertApprovedNavigation(requestedUrl: string, finalUrl: string): void {
+  const requested = new URL(requestedUrl)
+  const final = new URL(finalUrl)
+  if (requested.origin !== final.origin || requested.pathname !== final.pathname) {
+    throw new Error("Source redirected outside its exact approved origin/path")
+  }
+}
+
+/**
+ * Builds a fresh graph only from evidence corroborated in this run. Event
+ * evidence references are rebound to the live artifacts; fixture evidence IDs
+ * must never leak into a live result.
+ */
+export function assembleLiveGraph(input: InvestigationInput, observations: Evidence[], successfulSourceIds: ReadonlySet<string>): PropertyGraph {
+  const normalizedAddress = normalizeAddress(input.propertyAddress)
+  const candidateId = stableId("property-candidate", "LEE", normalizedAddress)
+  const caseId = stableId("case", "LEE", input.caseNumber)
+  const events = PROPERTY_EVIDENCE_SOURCES.flatMap((source): PropertyEvent[] => {
+    if (!successfulSourceIds.has(source.sourceId)) return []
+    const evidence = observations.find((candidate) => candidate.sourceId === source.sourceId && candidate.confidence === "HIGH")
+    if (!evidence) return []
+    const eventWithoutFingerprint: Omit<PropertyEvent, "rawFingerprint"> = {
+      eventId: stableId("event", source.registrySourceId, source.sourceRecordId, input.caseNumber),
+      eventType: source.eventType,
+      candidatePropertyId: candidateId,
+      sourceRecordId: source.sourceRecordId,
+      caseId,
+      eventDate: source.eventDate,
+      detectedAt: evidence.retrievedAt,
+      match: "CANDIDATE",
+      confidence: "MEDIUM",
+      evidenceIds: [evidence.evidenceId],
+    }
+    return [{ ...eventWithoutFingerprint, rawFingerprint: fingerprintEvent(eventWithoutFingerprint) }]
+  })
+  const legalDescription = PROPERTY_EVIDENCE_SOURCES.find((source) => successfulSourceIds.has(source.sourceId))?.legalDescription
+  return {
+    property: { candidateId, county: "LEE", siteAddress: input.propertyAddress, normalizedAddress, legalDescription },
+    owners: [],
+    courtCases: events.length ? [{ caseId, courtCaseNumber: input.caseNumber, county: "LEE", caseType: "Circuit civil" }] : [],
+    events,
+    evidence: observations,
+  }
+}
 
 export async function* replayVerifiedSample(): AsyncGenerator<InvestigationUpdate> {
   yield update("queued", "Verified sample replay queued — this is not a live Solari run.", { clearlyLabeledReplay: true })
@@ -89,7 +172,7 @@ async function runSolariSandbox(graph: PropertyGraph): Promise<{ sandboxId: stri
       evidenceCount: graph.evidence.length,
       now: now.toISOString(),
     }))
-    const scoringProgram = "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/acrebrief-input.json','utf8'));if(!x.propertyKey||!x.events?.length||!x.evidenceCount||x.events.some(e=>!e.sourceRecordId))process.exit(2);let s=0;const types=new Set(x.events.map(e=>e.eventType));for(const e of x.events){const age=Math.floor((Date.parse(x.now)-Date.parse(e.eventDate))/86400000);if(age>=0&&age<=7)s+=18}if(types.has('NEW_FORECLOSURE_CASE'))s+=16;if(types.has('NEW_LIS_PENDENS'))s+=14;if(types.has('NEW_TAX_DELINQUENCY'))s+=12;if(types.has('NEW_LIEN'))s+=10;if(types.has('AUCTION_SCHEDULED'))s+=12;process.stdout.write(JSON.stringify({valid:true,score:Math.min(s,100),eventCount:x.events.length,evidenceCount:x.evidenceCount}))"
+    const scoringProgram = "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/acrebrief-input.json','utf8'));if(!x.propertyKey||!x.events?.length||!x.evidenceCount||x.events.some(e=>!e.sourceRecordId))process.exit(2);let s=0;const types=new Set(x.events.map(e=>e.eventType));for(const e of x.events){const age=Math.floor((Date.parse(x.now)-Date.parse(e.eventDate))/86400000);if(age>=0&&age<=7)s+=18}if(types.has('NEW_FORECLOSURE_CASE'))s+=16;if(types.has('FORECLOSURE_NOTICE_PUBLISHED'))s+=10;if(types.has('FORECLOSURE_SALE_NOTICE_PUBLISHED'))s+=12;if(types.has('NEW_LIS_PENDENS'))s+=14;if(types.has('NEW_TAX_DELINQUENCY'))s+=12;if(types.has('NEW_LIEN'))s+=10;if(types.has('AUCTION_SCHEDULED'))s+=12;process.stdout.write(JSON.stringify({valid:true,score:Math.min(s,100),eventCount:x.events.length,evidenceCount:x.evidenceCount}))"
     const result = await sandbox.commands.run("node", { args: ["-e", scoringProgram] })
     if (result.exitCode !== 0) throw new Error("Sandbox evidence-manifest validation failed")
     const sandboxResult = JSON.parse(result.stdout) as { valid?: boolean; score?: number }
@@ -106,46 +189,54 @@ export async function* runLiveInvestigation(input: InvestigationInput): AsyncGen
     return
   }
   const approved = approvedSourceIds()
-  const approvedPortalSources = PERMITTED_LIVE_SOURCES.filter((source) => approved.has(source.sourceId))
-  const approvedPropertySources = PROPERTY_EVIDENCE_SOURCES.filter((source) => approved.has(source.sourceId))
+  const approvedPortalSources = PERMITTED_LIVE_SOURCES.filter((source) => sourcePolicyAllows(source.registrySourceId, source.url) && approved.has(source.registrySourceId))
+  const approvedPropertySources = PROPERTY_EVIDENCE_SOURCES.filter((source) => sourcePolicyAllows(source.registrySourceId, source.url) && approved.has(source.registrySourceId))
   if (approvedPropertySources.length === 0) {
-    yield update("configuration_required", "Live investigation is disabled by the default-deny source policy. Approve at least one property-evidence source explicitly before enabling automation.")
+    yield update("configuration_required", "Live investigation is disabled by the reviewed source policy. A credential or environment source ID cannot override a registry source that remains REVIEW_REQUIRED.")
     return
   }
-  for (const source of PERMITTED_LIVE_SOURCES.filter((source) => !approved.has(source.sourceId))) {
+  for (const source of PERMITTED_LIVE_SOURCES.filter((source) => !approved.has(source.registrySourceId) || !sourcePolicyAllows(source.registrySourceId, source.url))) {
     yield update("source", `${source.sourceId} is gated by the source-approval policy and was not opened.`, { sourceId: source.sourceId, status: "failed" })
   }
-  for (const source of PROPERTY_EVIDENCE_SOURCES.filter((source) => !approved.has(source.sourceId))) {
+  for (const source of PROPERTY_EVIDENCE_SOURCES.filter((source) => !approved.has(source.registrySourceId) || !sourcePolicyAllows(source.registrySourceId, source.url))) {
     yield update("source", `${source.sourceId} is gated by the source-approval policy and was not opened.`, { sourceId: source.sourceId, status: "failed" })
   }
-  yield update("queued", "Launching one recorded Solari Browser session for permitted Lee County public sources.")
+  yield update("queued", "Launching non-recorded Solari Browser sessions for reviewed Lee County sources.")
   const { Solari } = await import("@solarisdk/browser")
   const solari = new Solari({ apiKey: process.env.SOLARI_API_KEY })
   let sessionId: string | undefined
   const observations: Evidence[] = []
   let completedSources = 0
   const propertyEvidenceSucceeded = new Set<string>()
+  const sourceRequests = new Map<RuntimeSourceId, number>()
+  const consumeSourceRequest = (source: PortalSource) => {
+    const next = (sourceRequests.get(source.registrySourceId) ?? 0) + 1
+    if (next > sourceRequestBudget(source.registrySourceId)) throw new Error(`${source.registrySourceId} exceeded its approved per-run request budget`)
+    sourceRequests.set(source.registrySourceId, next)
+  }
   try {
-    // The recorded session deliberately visits only generic government portal
-    // entry points. Property-specific pages can contain names/contact details
-    // and are checked in a separate, unrecorded session below.
+    // Recording stays disabled until provider retention/deletion and replay
+    // review controls are implemented. Property-specific pages may contain
+    // unnecessary personal information even when the requested page is public.
     if (approvedPortalSources.length) {
-      const browser = await solari.launch({ recording: true, retries: 1, probe: true })
+      const browser = await solari.launch({ recording: false, retries: 1, probe: true })
       sessionId = browser.id
       try {
         const page = await browser.newPage()
         for (const source of approvedPortalSources) {
           if (!allowedOrigin(source.url)) throw new Error("Blocked non-allowlisted source")
-          yield update("source", `Checking ${source.sourceId} in the recorded Solari Browser session.`, { sourceId: source.sourceId, status: "running", sessionId, replayStatus: "recording_requested" })
+          yield update("source", `Checking ${source.sourceId} in a non-recorded Solari Browser session.`, { sourceId: source.sourceId, status: "running", sessionId })
           try {
+            consumeSourceRequest(source)
             await page.goto(source.url, { waitUntil: "domcontentloaded", timeout: 8_000 })
+            assertApprovedNavigation(source.url, page.url())
             const title = await page.title()
             observations.push({ evidenceId: `live_${sessionId}_${source.sourceId}`, sourceId: source.sourceId, sourceUrl: source.url, retrievedAt: new Date().toISOString(), rawValue: { pageTitle: title }, normalizedValue: { pageTitle: title }, confidence: "LOW", adapterVersion: "2026.09.01", note: "Live portal-availability evidence only. It does not assert a property-specific fact." })
             completedSources += 1
-            yield update("source", `${source.sourceId} reached. No unverified fields were promoted to facts.`, { sourceId: source.sourceId, status: "complete", sessionId, replayStatus: "available_later" })
+            yield update("source", `${source.sourceId} reached. No unverified fields were promoted to facts.`, { sourceId: source.sourceId, status: "complete", sessionId })
           } catch (error) {
             const message = error instanceof Error ? error.message : "source unavailable"
-            yield update("source", `${source.sourceId} failed without stopping the remaining investigation: ${message}`, { sourceId: source.sourceId, status: "failed", sessionId, replayStatus: "available_later" })
+            yield update("source", `${source.sourceId} failed without stopping the remaining investigation: ${message}`, { sourceId: source.sourceId, status: "failed", sessionId })
           }
         }
       } finally { await browser.close() }
@@ -157,17 +248,21 @@ export async function* runLiveInvestigation(input: InvestigationInput): AsyncGen
       for (const source of approvedPropertySources) {
         yield update("source", `Checking redacted property markers at ${source.sourceId} in a non-recorded Solari Browser session.`, { sourceId: source.sourceId, status: "running", sessionId })
         try {
+          if (!allowedOrigin(source.url)) throw new Error("Blocked non-allowlisted source")
+          consumeSourceRequest(source)
           await page.goto(source.url, { waitUntil: "domcontentloaded", timeout: 8_000 })
+          assertApprovedNavigation(source.url, page.url())
           const body = (await page.locator("body").innerText({ timeout: 4_000 })).toUpperCase().replace(/\s+/g, " ")
-          const markerMatches = Object.fromEntries(source.markers.map((marker) => [marker, body.includes(marker)]))
+          const markerMatches = Object.fromEntries(source.markers.map((marker) => [marker.name, body.includes(marker.value)]))
           const allMarkersMatched = Object.values(markerMatches).every(Boolean)
           observations.push({
             evidenceId: `live_${evidenceBrowser.id}_${source.sourceId}`,
             sourceId: source.sourceId,
             sourceUrl: source.url,
             retrievedAt: new Date().toISOString(),
-            rawValue: { caseNumber: input.caseNumber, propertyAddress: input.propertyAddress, markerMatches },
-            normalizedValue: { allMarkersMatched, contentSha256: createHash("sha256").update(body).digest("hex") },
+            effectiveDate: source.effectiveDate,
+            rawValue: { markerMatches },
+            normalizedValue: { allMarkersMatched, matchedMarkerCount: Object.values(markerMatches).filter(Boolean).length, expectedMarkerCount: source.markers.length, contentSha256: createHash("sha256").update(body).digest("hex") },
             confidence: allMarkersMatched ? "HIGH" : "LOW",
             adapterVersion: "2026.09.01",
             note: "Live marker verification. The source page was not recorded and its full text was not retained because it includes unnecessary personal information.",
@@ -185,19 +280,10 @@ export async function* runLiveInvestigation(input: InvestigationInput): AsyncGen
 
     if (propertyEvidenceSucceeded.size === 0) throw new Error("Property-specific sources did not corroborate a fresh result; portal reachability alone is not an investigation")
     yield update("normalizing", "Solari Sandbox is validating source identity and independently cross-checking the transparent score.", { sessionId })
-    const liveEvents = verifiedSampleGraph.events.filter((event) =>
-      (event.eventType === "NEW_FORECLOSURE_CASE" && propertyEvidenceSucceeded.has("lee-business-observer-notice-of-action"))
-      || (event.eventType === "AUCTION_SCHEDULED" && propertyEvidenceSucceeded.has("lee-business-observer-foreclosure-sale")),
-    )
-    const graph: PropertyGraph = {
-      property: verifiedSampleGraph.property,
-      owners: [],
-      courtCases: liveEvents.length ? verifiedSampleGraph.courtCases : [],
-      events: liveEvents,
-      evidence: observations,
-    }
+    const graph = assembleLiveGraph(input, observations, propertyEvidenceSucceeded)
     const sandbox = await runSolariSandbox(graph)
-    yield update("complete", `Live Solari investigation completed with ${completedSources}/${approvedPortalSources.length + approvedPropertySources.length} approved sources reached. The replay contains only generic portal entry points.`, { graph, score: sandbox.score, sessionId, sandboxId: sandbox.sandboxId, replayStatus: "available_later" })
+    const score: OpportunityScore = { ...sandbox.score, confidence: "LOW", unknown: [...sandbox.score.unknown, "Current court and sale status were not corroborated by an approved official county source in this run"] }
+    yield update("review_required", `Live publication verification reached ${completedSources}/${approvedPortalSources.length + approvedPropertySources.length} reviewed sources. Official county corroboration is still required; no recording was created and no official status is implied.`, { graph, score, sessionId, sandboxId: sandbox.sandboxId })
   } catch (error) {
     yield update("failed", error instanceof Error ? `Live investigation failed safely: ${error.message}` : "Live investigation failed safely.", { sessionId })
   } finally { await solari.close() }

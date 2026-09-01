@@ -14,7 +14,7 @@ type InvestigationStep = {
 
 type StreamPayload = Partial<InvestigationStep> & {
   type?: string;
-  stage?: "queued" | "source" | "normalizing" | "complete" | "configuration_required" | "failed";
+  stage?: "queued" | "source" | "normalizing" | "complete" | "review_required" | "configuration_required" | "failed";
   runId?: string;
   message?: string;
   error?: string;
@@ -86,7 +86,7 @@ export default function Home() {
   const [running, setRunning] = useState(false);
   const [runNote, setRunNote] = useState("Ready for a fresh, source-by-source check.");
   const [replayUrl, setReplayUrl] = useState<string | undefined>();
-  const [runResult, setRunResult] = useState<Pick<StreamPayload, "graph" | "score" | "clearlyLabeledReplay"> | undefined>();
+  const [runResult, setRunResult] = useState<(Pick<StreamPayload, "graph" | "score" | "clearlyLabeledReplay"> & { reviewRequired?: boolean }) | undefined>();
   const [signup, setSignup] = useState<"idle" | "sending" | "success" | "unavailable">("idle");
   const abortRef = useRef<AbortController | null>(null);
   const liveInputRef = useRef<HTMLInputElement | null>(null);
@@ -97,12 +97,12 @@ export default function Home() {
   const completed = useMemo(() => steps.filter((step) => step.status === "complete").length, [steps]);
 
   function updateStep(payload: StreamPayload) {
-    const stageId = payload.stage === "normalizing" ? "normalization" : undefined;
+    const stageId = payload.stage === "normalizing" || payload.stage === "review_required" ? "normalization" : undefined;
     const id = payload.id ?? stageId ?? payload.sourceId ?? payload.source?.toLowerCase().replace(/[^a-z]+/g, "-");
     if (!id) return;
     const source = payload.source ?? (id === "lee-clerk-court-cases" || id === "lee-clerk-matrix" ? "Lee Clerk — Circuit Civil" : id === "lee-property-appraiser" ? "Lee Property Appraiser" : id === "lee-tax-collector" ? "Lee Tax Collector" : id === "lee-business-observer-notice-of-action" ? "Legal notice — notice of action" : id === "lee-business-observer-foreclosure-sale" ? "Legal notice — foreclosure sale" : id === "lee-community-development-permit-report" ? "Lee County permit report" : id === "normalization" ? "Evidence normalization" : "Investigation source");
     const surface = payload.surface ?? (id === "normalization" || payload.sandboxId ? "Sandbox" : id === "lee-clerk-court-cases" || id === "lee-clerk-matrix" || id === "lee-property-appraiser" || id === "lee-tax-collector" || id === "lee-business-observer-notice-of-action" || id === "lee-business-observer-foreclosure-sale" ? "Browser" : "Review");
-    const status = payload.status ?? (payload.stage === "complete" ? "complete" : payload.stage === "failed" || payload.stage === "configuration_required" ? "failed" : "running");
+    const status = payload.status ?? (payload.stage === "complete" ? "complete" : payload.stage === "review_required" ? "warning" : payload.stage === "failed" || payload.stage === "configuration_required" ? "failed" : "running");
     setSteps((current) => {
       const existing = current.find((item) => item.id === id || item.source === source);
       if (!existing) {
@@ -126,7 +126,7 @@ export default function Home() {
       } : item));
     });
     if (payload.replayUrl) setReplayUrl(payload.replayUrl);
-    if (payload.stage === "complete" && payload.graph && payload.score) setRunResult({ graph: payload.graph, score: payload.score, clearlyLabeledReplay: payload.clearlyLabeledReplay });
+    if ((payload.stage === "complete" || payload.stage === "review_required") && payload.graph && payload.score) setRunResult({ graph: payload.graph, score: payload.score, clearlyLabeledReplay: payload.clearlyLabeledReplay, reviewRequired: payload.stage === "review_required" });
   }
 
   async function investigate() {
@@ -167,6 +167,7 @@ export default function Home() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let receivedTerminal = false;
         while (true) {
           const result = await reader.read();
           if (result.done) break;
@@ -180,8 +181,9 @@ export default function Home() {
               const payload = JSON.parse(dataLine.slice(5).trim()) as StreamPayload;
               if (payload.type === "error" || payload.stage === "failed" || payload.stage === "configuration_required") throw new Error(payload.error ?? payload.message ?? "Source check failed");
               if (payload.stage === "queued") setRunNote(payload.message ?? "Investigation queued.");
-              else if (payload.stage === "complete") {
-                updateStep({ ...payload, id: "normalization", source: "Evidence normalization", surface: payload.clearlyLabeledReplay ? "Review" : "Sandbox", status: "complete" });
+              else if (payload.stage === "complete" || payload.stage === "review_required") {
+                receivedTerminal = true;
+                updateStep({ ...payload, id: "normalization", source: "Evidence normalization", surface: payload.clearlyLabeledReplay ? "Review" : "Sandbox", status: payload.stage === "review_required" ? "warning" : "complete" });
                 setRunNote(payload.message ?? "Investigation finished. Review every claim against its evidence.");
               } else updateStep(payload);
             } catch (error) {
@@ -190,7 +192,8 @@ export default function Home() {
             }
           }
         }
-        setRunNote(liveMode ? "Live investigation finished. Review every claim against its evidence." : "Verified sample replay finished. It does not claim a live Solari session.");
+        if (!receivedTerminal) setRunNote(liveMode ? "Live investigation ended without a supported terminal result." : "Verified sample replay ended without a supported terminal result.");
+        else if (!liveMode) setRunNote("Verified sample replay finished. It does not claim a live Solari session.");
       }
     } catch (error) {
       if ((error as DOMException).name === "AbortError") return;
@@ -307,7 +310,7 @@ export default function Home() {
         <div className="run-list">
           {steps.map((step) => <div className="run-item" key={step.id}><Status status={step.status} /><div><strong>{step.source}</strong><p>{step.detail}</p></div><SurfaceBadge surface={step.surface} />{step.timestamp && <time>{step.timestamp}</time>}</div>)}
         </div>
-        {runResult?.graph && runResult.score && <section className="run-result" aria-label="Investigation result"><div><span className="tiny-label">{runResult.clearlyLabeledReplay ? "VERIFIED REPLAY RESULT" : "FRESH LIVE RESULT"}</span><h3>{runResult.graph.property.siteAddress ?? "Candidate Lee County property"}</h3><p>{runResult.graph.events.length} supported event signal{runResult.graph.events.length === 1 ? "" : "s"} · {runResult.graph.evidence.length} evidence observation{runResult.graph.evidence.length === 1 ? "" : "s"}</p></div><div className="result-score"><strong>{runResult.score.score}</strong><span>{runResult.score.confidence} confidence</span></div><ul>{runResult.score.reasons.map((reason) => <li key={`${reason.points}-${reason.label}`}><b>+{reason.points}</b> {reason.label}</li>)}</ul><div className="result-unknown"><strong>Still unknown</strong><p>{runResult.score.unknown.join(" · ")}</p></div></section>}
+        {runResult?.graph && runResult.score && <section className="run-result" aria-label="Investigation result"><div><span className="tiny-label">{runResult.clearlyLabeledReplay ? "VERIFIED REPLAY RESULT" : runResult.reviewRequired ? "FRESH PUBLICATION VERIFICATION · REVIEW REQUIRED" : "FRESH LIVE RESULT"}</span><h3>{runResult.graph.property.siteAddress ?? "Candidate Lee County property"}</h3><p>{runResult.graph.events.length} supported event signal{runResult.graph.events.length === 1 ? "" : "s"} · {runResult.graph.evidence.length} evidence observation{runResult.graph.evidence.length === 1 ? "" : "s"}</p></div><div className="result-score"><strong>{runResult.score.score}</strong><span>{runResult.score.confidence} confidence</span></div><ul>{runResult.score.reasons.map((reason) => <li key={`${reason.points}-${reason.label}`}><b>+{reason.points}</b> {reason.label}</li>)}</ul><div className="result-unknown"><strong>Still unknown</strong><p>{runResult.score.unknown.join(" · ")}</p></div></section>}
         {replayUrl ? <a className="replay-link" href={replayUrl} target="_blank" rel="noreferrer">Watch Solari session replay <Mark kind="arrow" /></a> : <p className="replay-muted">A session replay appears here only when the source run safely provides one.</p>}
       </section>
 

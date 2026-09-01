@@ -8,6 +8,7 @@ field_notes:
   confidence: desk_verified | source_declared | candidate | unknown
   adapter_status: enabled_sample | gated | research_only | not_started
   terms_or_use_notes: 'verified wording where known; otherwise explicitly unverified'
+  runtime_policy: generated into src/lib/source-policy.generated.ts; APPROVED entries require exact URLs, accountable reviewer, expiry, terms review date, and a positive per-run request budget
 sources:
   - source_id: lee_business_observer_legal_notices
     jurisdiction: Lee County, FL
@@ -22,9 +23,9 @@ sources:
     authentication_required: false
     cost: public access observed
     refresh_frequency: weekly publication; individual pages dated by publication
-    terms_or_use_notes: exact notices may be used as redacted demo evidence; automated live retrieval remains default-deny until publisher terms are reviewed
-    robots_notes: unverified
-    rate_limit_notes: unverified; no production automation approval recorded
+    terms_or_use_notes: exact notices may be used as redacted demo evidence; no linked public terms page or express automation grant was found, so automated live retrieval remains default-deny pending publisher authorization
+    robots_notes: verified 2026-09-01; user-agent * disallows /accounts/login/ only, so /news/ is not robots-disallowed; robots is not affirmative use authorization
+    rate_limit_notes: no published automation rate limit or production approval found; do not automate
     primary_keys: [notice_id, case_number]
     date_fields: [publication_date, scheduled_sale_date]
     property_identifiers: [property_address, legal_description, case_number]
@@ -33,6 +34,15 @@ sources:
     confidence: desk_verified
     adapter_status: enabled_sample
     last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: REVIEW_REQUIRED
+      exact_urls:
+        - https://legals.businessobserverfl.com/news/2026/may/08/26-01775l/
+        - https://legals.businessobserverfl.com/news/2026/aug/28/26-03493l/
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: null
+      accountable_reviewer: null
+      max_requests_per_run: 0
   - source_id: lee_clerk_official_records
     jurisdiction: Lee County, FL
     source_name: Lee County Clerk — Official Records
@@ -81,6 +91,13 @@ sources:
     confidence: desk_verified
     adapter_status: gated
     last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: REVIEW_REQUIRED
+      exact_urls: [https://matrix.leeclerk.org/home/index]
+      terms_reviewed_at: null
+      approval_expires_at: null
+      accountable_reviewer: null
+      max_requests_per_run: 0
   - source_id: lee_clerk_foreclosure_tax_deed
     jurisdiction: Lee County, FL
     source_name: Lee County Clerk — Foreclosure and Tax Deed Sales
@@ -129,6 +146,13 @@ sources:
     confidence: desk_verified
     adapter_status: gated
     last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: REVIEW_REQUIRED
+      exact_urls: [https://www.leepa.org/Search/PropertySearch.aspx]
+      terms_reviewed_at: null
+      approval_expires_at: null
+      accountable_reviewer: null
+      max_requests_per_run: 0
   - source_id: lee_property_appraiser_geoview
     jurisdiction: Lee County, FL
     source_name: Lee County Property Appraiser — GeoView GIS
@@ -177,6 +201,13 @@ sources:
     confidence: candidate
     adapter_status: not_started
     last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: REVIEW_REQUIRED
+      exact_urls: [https://leetc.com/property-taxes/]
+      terms_reviewed_at: null
+      approval_expires_at: null
+      accountable_reviewer: null
+      max_requests_per_run: 0
   - source_id: lee_code_permits
     jurisdiction: Lee County, FL
     source_name: Lee County code enforcement and permitting

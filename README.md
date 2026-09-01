@@ -31,10 +31,10 @@ Every fact carries a source URL, retrieval time, event/effective date, raw and n
 
 AcreBrief uses Solari as the operating substrate for the hard parts of a live investigation:
 
-- **Browser** works enabled JavaScript-heavy public portals when a documented API/bulk export is not available, can capture reviewed evidence, and records an opt-in replay only for privacy-safe surfaces.
+- **Browser** works enabled JavaScript-heavy public portals when a documented API/bulk export is not available and can capture reviewed evidence without persisting full page text.
 - **Persistent profiles** preserve an explicitly authorized portal session when one is required. They are never committed or exposed in the public UI.
 - **Sandbox** currently validates the fresh evidence manifest and independently cross-checks the numeric score in an isolated microVM. Bounded PDF parsing is the next adapter stage, not a capability this slice pretends has already run.
-- **Recording** makes approved generic-portal checks auditable. Property-specific pages stay unrecorded because their full text contains unnecessary personal information. Sandbox snapshots are a documented optimization path, not enabled in this slice.
+- **Recording** is a demonstrated Solari capability but is disabled in AcreBrief’s current live path until provider retention/deletion and application review/redaction controls exist. Sandbox snapshots are likewise a documented optimization path, not enabled in this slice.
 - **Desktop** is intentionally a constrained fallback for a legacy GUI that cannot be reasonably accessed through permitted browser/API retrieval. It is not used to bypass access controls or CAPTCHA.
 
 The detailed design and capability evidence are in [Solari architecture](docs/SOLARI_ARCHITECTURE.md).
@@ -60,7 +60,7 @@ npm run dev
 
 Visit `http://localhost:3000`. The default public configuration is `NEXT_PUBLIC_DEMO_MODE=verified-sample`.
 
-To enable eligible live investigation surfaces, set a real `SOLARI_API_KEY`, a long `ACREBRIEF_LIVE_ACCESS_TOKEN`, and only the reviewed IDs in `ACREBRIEF_APPROVED_SOURCE_IDS`. The public route is single-concurrency and token-gated so anonymous visitors cannot spend the deployment’s Solari balance. Do not put secrets in `NEXT_PUBLIC_*`, commit them, share a profile, or use them to evade a source's terms, CAPTCHA, login requirement, rate limits, or confidentiality restrictions.
+To enable an eligible live investigation surface, its generated runtime policy must first be `APPROVED` in `data/source_registry.yaml` with exact URLs, reviewer, expiry, terms-review date, and request budget. The build rejects policy drift. Only then set a real `SOLARI_API_KEY`, a long `ACREBRIEF_LIVE_ACCESS_TOKEN`, and the matching registry ID in `ACREBRIEF_APPROVED_SOURCE_IDS`. The public route is single-concurrency and token-gated so anonymous visitors cannot spend the deployment’s Solari balance. Do not put secrets in `NEXT_PUBLIC_*`, commit them, share a profile, or use them to evade a source's terms, CAPTCHA, login requirement, rate limits, or confidentiality restrictions.
 
 ```bash
 npm run verify

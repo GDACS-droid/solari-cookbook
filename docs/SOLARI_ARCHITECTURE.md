@@ -20,7 +20,7 @@ flowchart LR
   G -->|approved JS portal| B[Solari Browser\nselectors · retry · redacted markers]
   G -->|legacy GUI only + approved| X[Solari Desktop\nwatchable VNC fallback]
   G -->|unknown / restricted| H[Human review queue]
-  B --> R[Opt-in session recording\nredaction gate]
+  B -. future .-> R[Opt-in session recording\ndisabled pending retention/redaction controls]
   B --> P[Persistent profile\nonly authorized portals]
   Q --> S[Solari Sandbox\nevidence manifest · DQ\nscore cross-check]
   B --> S
@@ -42,7 +42,7 @@ flowchart LR
 | Sandbox | Validate source-native IDs/evidence counts and independently cross-check the numeric score | No customer secrets in outputs; serialized input; resource/time caps | SDK/account command smoke passed; live-run quality gate compiles; PDF parsing remains future adapter work |
 | Desktop | Last-resort computer-use for a legitimate GUI-only government interface | Requires source approval; visible operator context; never used merely to satisfy a demo or bypass browser restrictions | Deliberately not enabled by default |
 | Persistent profile | Reuse a lawfully authenticated session without putting cookies in the app/database | Explicit owner consent; encrypted provider storage; profile ID is secret; explicit save; deletion policy | Design supported; disabled until a permitted source requires it |
-| Recording | Let a reviewer see what the agent did and bind a run to its collection sequence | Explicit per-session opt-in; asynchronous retrieval; review/redaction before public sharing | Enabled only for safe demo/approved sessions |
+| Recording | Let a reviewer see what the agent did and bind a run to its collection sequence | Explicit per-session opt-in; asynchronous retrieval; provider retention/deletion plus application review/redaction required | Demonstrated in upstream examples; disabled in AcreBrief until those controls exist |
 | Snapshot | Start processing fast and consistently | Snapshot provenance/version must be retained; no claim that a snapshot is source truth | Supported by Solari, not enabled in the current slice |
 
 ## Adapter contract and failure posture

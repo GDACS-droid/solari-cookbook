@@ -14,7 +14,8 @@ The product accepts user property queries and processes untrusted public documen
 - Encrypt/restrict evidence at rest; signed/short-lived artifact access; redact before public replay; audit evidence views/exports.
 - Make source failure explicit. A partial run cannot assert a complete investigation, mutate historical evidence, or produce a repeated alert.
 - Avoid person-centric search expansion. Entity resolution is confined to a property-owning entity and is confidence-scored.
-- Require `ACREBRIEF_LIVE_ACCESS_TOKEN` for every paid run, permit one live run per server instance, propagate stream cancellation to remote-resource cleanup, and keep `ACREBRIEF_APPROVED_SOURCE_IDS` empty until accountable source review is complete. Production scale also requires a durable cross-instance quota/rate-limit service.
+- Require `ACREBRIEF_LIVE_ACCESS_TOKEN` for every paid run, permit one live run per server instance, propagate stream cancellation to remote-resource cleanup, and keep `ACREBRIEF_APPROVED_SOURCE_IDS` empty until accountable source review is complete. An environment ID is necessary but never sufficient: the runtime policy generated from the YAML registry must also mark the exact source and URL `APPROVED`, name a reviewer, set an expiry, record the terms-review date, and supply a positive request budget. CI rejects generated-policy drift. Production scale additionally requires a durable cross-instance quota/rate-limit service.
+- Keep Solari recording disabled until provider retention/deletion behavior and an application-side review/redaction lifecycle are implemented. Validate both the requested URL and final navigation origin/path before extracting any page content.
 
 ## Release checklist
 

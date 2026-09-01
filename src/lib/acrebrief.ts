@@ -12,6 +12,8 @@ export type MatchKind = "EXACT" | "CANDIDATE" | "UNRESOLVED"
 export type EventType =
   | "NEW_LIS_PENDENS"
   | "NEW_FORECLOSURE_CASE"
+  | "FORECLOSURE_NOTICE_PUBLISHED"
+  | "FORECLOSURE_SALE_NOTICE_PUBLISHED"
   | "NEW_LIEN"
   | "LIEN_RELEASED"
   | "NEW_TAX_DELINQUENCY"
@@ -191,6 +193,8 @@ export function scoreOpportunity(graph: PropertyGraph, now = new Date()): Opport
     if (ageDays >= 0 && ageDays <= 7) add(18, `New ${event.eventType.replaceAll("_", " ").toLowerCase()} signal (${ageDays}d)`, event.eventId)
   }
   if (eventTypes.has("NEW_FORECLOSURE_CASE")) add(16, "Foreclosure case signal")
+  if (eventTypes.has("FORECLOSURE_NOTICE_PUBLISHED")) add(10, "Foreclosure notice published")
+  if (eventTypes.has("FORECLOSURE_SALE_NOTICE_PUBLISHED")) add(12, "Foreclosure sale notice published")
   if (eventTypes.has("NEW_LIS_PENDENS")) add(14, "Lis pendens recorded")
   if (eventTypes.has("NEW_TAX_DELINQUENCY")) add(12, "Tax delinquency signal")
   if (eventTypes.has("NEW_LIEN")) add(10, "Recorded lien signal")
