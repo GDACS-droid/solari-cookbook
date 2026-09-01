@@ -16,6 +16,8 @@ for (const source of registry.sources) {
   if (typeof source.source_id !== "string" || !source.source_id) throw new Error("Runtime source is missing source_id")
   if (!['APPROVED', 'REVIEW_REQUIRED'].includes(item.automation_approval)) throw new Error(`${source.source_id} has an invalid automation approval`)
   if (!Array.isArray(item.exact_urls) || item.exact_urls.length === 0) throw new Error(`${source.source_id} must declare exact_urls`)
+  const snapshotBudget = item.max_snapshot_requests_per_run ?? item.max_requests_per_run
+  if (!Number.isInteger(snapshotBudget) || snapshotBudget < 0) throw new Error(`${source.source_id} has an invalid snapshot request budget`)
   for (const url of item.exact_urls) {
     const parsed = new URL(url)
     if (parsed.protocol !== "https:") throw new Error(`${source.source_id} contains a non-HTTPS runtime URL`)
@@ -34,6 +36,7 @@ for (const source of registry.sources) {
     approvalExpiresAt: item.approval_expires_at ?? null,
     accountableReviewer: item.accountable_reviewer ?? null,
     maxRequestsPerRun: item.max_requests_per_run,
+    maxSnapshotRequestsPerRun: snapshotBudget,
   }
 }
 

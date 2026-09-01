@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // Next's dev server rejects the HMR socket when the browser origin is 127.0.0.1.
 // Keep browser-driven interaction tests on the same localhost origin as dev.
-test.use({ baseURL: process.env.PLAYWRIGHT_BASE_URL?.replace("127.0.0.1", "localhost") ?? "http://localhost:3000" });
+test.use({ baseURL: process.env.PLAYWRIGHT_BASE_URL?.replace("127.0.0.1", "localhost") ?? "http://localhost:3107" });
 
 test("shows the daily queue and a property-first evidence brief", async ({ page }) => {
   await page.goto("/");

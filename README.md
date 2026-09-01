@@ -24,6 +24,12 @@ The selected City record is a real municipal foreclosure registration source-ope
 
 The critical live route depends only on sources classified `PUBLIC_DOWNLOAD` or `OPEN_DATA_API`. Business Observer and unapproved Clerk/browser sources remain `REVIEW_REQUIRED` and are never opened by this path.
 
+### The daily event-stream foundation
+
+The additive Cape Coral runner now snapshots privacy-minimized official Code Enforcement, Utility Lien, and Building Permit deltas, with exact-parcel Payoff snapshots for a bounded watchlist. The first run establishes a baseline and emits zero `NEW_*` events; late old rows are updates, never falsely relabeled as new. Each transition records whether its clock came from a source event, source update, or AcreBrief detection.
+
+An opt-in live contract test has retrieved the real official schemas/data and persisted a three-source baseline across process-independent store instances. The local/VM store is deliberately not wired to Vercel: production scheduling and “new since last run” UI remain disabled until a transactional Postgres resource is approved, migrated, and adversarially verified. See [Cape Coral event stream](docs/CAPE_CORAL_EVENT_STREAM.md).
+
 ## The customer question
 
 > **What changed in Southwest Florida property distress today, and which properties are actually worth investigating?**
@@ -65,6 +71,8 @@ Current `LIVE_READY` chain:
 | Cape Coral Utility Lien Open Data | `OPEN_DATA_API` | active municipal-lien source status and source event date |
 | Lee County parcel/locator REST | `OPEN_DATA_API` | independent exact parcel/address lookup, available as corroboration |
 
+The snapshot adapters additionally live-verify Cape Coral Code Enforcement, Building Permits, and watchlist Payoff. Inspections and 311 remain `REVIEW_REQUIRED`.
+
 See the [source matrix](docs/SOURCE_MATRIX.md) for the review-required alternatives and caveats.
 
 ## Quick start
@@ -86,7 +94,7 @@ npm run verify
 npm run test:e2e
 ```
 
-Verified locally on September 1, 2026: source-policy drift check, lint, TypeScript, 35 unit/integration tests, production build, 10 desktop/mobile E2E tests, a zero-vulnerability high-severity dependency audit, and a real Solari Browser + Sandbox run that completed the DOR→City foreclosure-registration exact parcel join.
+Verified locally on September 1, 2026: source-policy drift check, lint, TypeScript, 57 unit/integration/API/policy tests, production build, 10 desktop/mobile E2E tests, three opt-in official City live-contract checks, a zero-vulnerability high-severity dependency audit, and a real Solari Browser + Sandbox run that completed the DOR→City foreclosure-registration exact parcel join.
 
 ## Safety and limits
 
@@ -104,7 +112,7 @@ Primary users are acquisition teams, investor/broker teams, wholesalers, and pro
 
 > **AcreBrief autonomously investigates changes across fragmented primary sources, resolves them into a parcel event graph, preserves the proof, and surfaces the few records worth a human's next hour.**
 
-Pilot hypothesis: **$499/seat/month** for daily briefs, live investigations, evidence export, watchlists, and review queues. No pilots, testimonials, or usage are fabricated. The production form is shown only when an approved server-side webhook exists; the current deployment has no approved sink and therefore exposes no clickable 503 form. See [Product](docs/PRODUCT.md) and [competitive analysis](docs/COMPETITIVE_ANALYSIS.md).
+Founding hypothesis: **$750–$1,500/month for a concierge design-partner pilot**, with a $500 two-week paid beta as a low-friction validation option. The customer supplies a real buy box; AcreBrief delivers a small set of source-backed investigations. No pilots, testimonials, or usage are fabricated. The production form is shown only when an approved durable sink exists; the current deployment therefore does not pretend an application was stored. See the [founding pilot package](docs/FOUNDING_PILOT.md), [product definition](docs/PRODUCT.md), and [competitive analysis](docs/COMPETITIVE_ANALYSIS.md).
 
 ## Challenge basis
 

@@ -29,6 +29,22 @@ The free City of Cape Coral Open Data source now handles the immediate source-da
 - Required redaction, confidentiality incident, removal, retention, and credential controls.
 - Whether party addresses may be used as candidate parcel-resolution clues. `DefAddress` is not documented as the mortgaged property and must never become an exact parcel join by itself.
 
+## Prepared official inquiry — not sent
+
+Submit through the Clerk's [Public Records Request — Bulk Data Requests](https://www.leeclerk.org/services/public-records-request) path or ask the public Bulk Data Services team to route it. No request, agreement, purchase, or credential creation has been performed by Codex.
+
+> We are evaluating the $180/year Civil Suit Case List for AcreBrief, a commercial property-intelligence application. Before executing the Data Extract Agreement, please confirm:
+>
+> 1. May we automatically ingest delivered files into our access-controlled internal cloud system?
+> 2. May we sell customer reports containing normalized facts and analysis derived from the feed, provided we do not redistribute the raw Clerk dataset or credentials?
+> 3. What are the delivery channel, file format, timezone, frequency, normal publication latency, and authentication method?
+> 4. Are deliveries full snapshots or deltas, and how are corrections, sealed/removed records, dismissals, and late entries represented?
+> 5. What historical/backfill data is available, at what depth and cost?
+> 6. Which exact `CaseCategory` / `CaseCatDescription` values identify mortgage foreclosure, HOA/condo foreclosure, and other foreclosure actions? Is a current codebook and de-identified sample available before purchase?
+> 7. What retention, redaction, confidentiality-incident, downstream customer-display, and cloud-subprocessor requirements apply to this use?
+>
+> Our intended output is a property-centered brief with case number, filing date/category, parcel-resolution status, official-source provenance, and derived prioritization. We do not intend to redistribute the raw feed or expose credentials.
+
 ## Weekly report finding
 
 The Clerk also publishes a Foreclosure Registry Weekly Report from the bulk-data page. Its reported fields provide registry/accounting context (case number, parties, balance changes, division, report-as-of and printed dates), not the filing date or parcel/site address. It can become corroborating `FORECLOSURE_REGISTRY_BALANCE_CHANGED` evidence after case/property resolution, but it cannot emit `NEW_FORECLOSURE_CASE`.

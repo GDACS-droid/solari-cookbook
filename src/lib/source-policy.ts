@@ -10,6 +10,7 @@ interface RuntimePolicy {
   approvalExpiresAt: string | null
   accountableReviewer: string | null
   maxRequestsPerRun: number
+  maxSnapshotRequestsPerRun: number
 }
 
 const policies = GENERATED_SOURCE_POLICY as Record<RuntimeSourceId, RuntimePolicy>
@@ -25,4 +26,8 @@ export function sourcePolicyAllows(registrySourceId: RuntimeSourceId, exactUrl: 
 
 export function sourceRequestBudget(registrySourceId: RuntimeSourceId): number {
   return policies[registrySourceId].maxRequestsPerRun
+}
+
+export function sourceSnapshotRequestBudget(registrySourceId: RuntimeSourceId): number {
+  return policies[registrySourceId].maxSnapshotRequestsPerRun
 }

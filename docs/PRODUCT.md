@@ -19,7 +19,8 @@ Lee County first: new filing/record signal → conservative parcel resolution �
 
 ## Pricing hypothesis (not a published offer)
 
-- Pilot: 3–10 qualified local teams; interview-led and explicitly opt-in.
+- Founding concierge pilot: $750–$1,500/month for AcreBrief to work one real buy box and deliver source-backed investigations; a $500 two-week paid beta is the lowest-friction willingness-to-pay test.
+- Pilot cohort: 3–10 qualified local teams; interview-led and explicitly opt-in.
 - Starter: $299–499/month for a small team, daily event brief and limited investigations.
 - Team: $1,000–2,000/month for shared watchlists, historical exports, and higher investigation allocation.
 - Data/enterprise: custom pricing only after licensing, audit controls, and support needs are established.

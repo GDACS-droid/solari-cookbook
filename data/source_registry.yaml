@@ -600,6 +600,143 @@ sources:
       approval_expires_at: '2026-12-01'
       accountable_reviewer: AcreBrief public-source review
       max_requests_per_run: 2
+      max_snapshot_requests_per_run: 4
+  - source_id: cape_coral_open_data_building_permits
+    jurisdiction: Cape Coral, Lee County, FL
+    source_name: City of Cape Coral Open Data — Building Permits
+    official_url: https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/1
+    access_basis: OPEN_DATA_API
+    data_category: [permit, property_activity, physical_condition]
+    access_method: City-published ArcGIS Open Data query API
+    api_available: true
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public open-data API
+    refresh_frequency: City-maintained service with apply, issue, finalize, expiration, inspection, and last-changed timestamps
+    terms_or_use_notes: request only permit identity/status/dates/value/type/work class/parcel/site-address fields; exclude contractor and company identities
+    robots_notes: structured City Open Data API; no page scraping
+    rate_limit_notes: bounded lastchangedon window with end cap, stable ordering, maximum four pages per scheduled source run
+    primary_keys: [permit_number]
+    date_fields: [applydate, issuedate, finalizedate, last_insp_date, lastchangedon, expiredate]
+    property_identifiers: [parcel, site_address]
+    document_types: [building_permit]
+    historical_depth: source contains historical permits; exact depth not asserted
+    confidence: source_declared
+    adapter_status: live_ready
+    last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: APPROVED
+      exact_urls:
+        - https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/1/query
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: '2026-12-01'
+      accountable_reviewer: AcreBrief public-source review
+      max_requests_per_run: 1
+      max_snapshot_requests_per_run: 4
+  - source_id: cape_coral_open_data_payoff
+    jurisdiction: Cape Coral, Lee County, FL
+    source_name: City of Cape Coral Open Data — Payoff Data
+    official_url: https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/2
+    access_basis: OPEN_DATA_API
+    data_category: [municipal_balance, property_enrichment]
+    access_method: City-published ArcGIS Open Data query API; exact approved watchlist parcels only
+    api_available: true
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public open-data API
+    refresh_frequency: no source update timestamp published; watchlist snapshots only
+    terms_or_use_notes: exclude NAME; retain only STRAP, non-account service category, current amount, payoff, visibility marker, site address, and geotype; never label as tax delinquency or lien
+    robots_notes: structured City Open Data API; no page scraping
+    rate_limit_notes: one batched query for at most 50 prevalidated watchlist parcels plus one transient retry
+    primary_keys: [strap, service_category]
+    date_fields: []
+    property_identifiers: [strap]
+    document_types: [municipal_payoff_state]
+    historical_depth: current state; history produced only by AcreBrief snapshots
+    confidence: source_declared
+    adapter_status: live_ready
+    last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: APPROVED
+      exact_urls:
+        - https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/2/query
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: '2026-12-01'
+      accountable_reviewer: AcreBrief public-source review
+      max_requests_per_run: 1
+      max_snapshot_requests_per_run: 2
+  - source_id: cape_coral_open_data_inspections
+    jurisdiction: Cape Coral, Lee County, FL
+    source_name: City of Cape Coral Open Data — Inspections
+    official_url: https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/7
+    access_basis: OPEN_DATA_API
+    data_category: [inspection, permit_activity, physical_condition]
+    access_method: City-published ArcGIS Open Data query API
+    api_available: true
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public open-data API
+    refresh_frequency: created/scheduled/completed timestamps; no reliable row-updated clock
+    terms_or_use_notes: exclude inspector, creator, and scheduling-channel fields; native inspection identity/revision behavior needs collision testing before production events
+    robots_notes: structured City Open Data API; no page scraping
+    rate_limit_notes: rolling bounded date window only; full table exceeds four million rows and must not be scanned daily
+    primary_keys: [object_id_candidate, permit_number, strap, inspection_type]
+    date_fields: [created_date, scheduled_date, completed_date]
+    property_identifiers: [strap, site_address]
+    document_types: [permit_inspection]
+    historical_depth: large historical table; exact depth not asserted
+    confidence: desk_verified
+    adapter_status: research_only
+    last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: REVIEW_REQUIRED
+      exact_urls:
+        - https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/7/query
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: null
+      accountable_reviewer: null
+      max_requests_per_run: 0
+      max_snapshot_requests_per_run: 0
+  - source_id: cape_coral_open_data_311
+    jurisdiction: Cape Coral, Lee County, FL
+    source_name: City of Cape Coral Open Data — 311 Issues
+    official_url: https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/4
+    access_basis: OPEN_DATA_API
+    data_category: [municipal_issue, property_condition_candidate]
+    access_method: City-published ArcGIS Open Data query API
+    api_available: true
+    bulk_download_available: true
+    browser_required: false
+    desktop_required: false
+    authentication_required: false
+    cost: public open-data API
+    refresh_frequency: source provides created, resolved, due, and last-updated timestamps
+    terms_or_use_notes: exclude Description, EventDescription, Title, coordinates, and all confidential rows; address-only property matching must remain review-required until exact parcel resolution succeeds
+    robots_notes: structured City Open Data API; no page scraping
+    rate_limit_notes: an ordinary filtered count query returned HTTP 403 during reconnaissance; do not bypass and do not production-enable until the accepted query shape is verified
+    primary_keys: [issue_id]
+    date_fields: [create_date, due_date, resolved_date, last_updated_date]
+    property_identifiers: [site_address_candidate_only]
+    document_types: [311_issue]
+    historical_depth: source contains historical issues; exact depth not asserted
+    confidence: desk_verified
+    adapter_status: research_only
+    last_verified_at: '2026-09-01'
+    runtime_policy:
+      automation_approval: REVIEW_REQUIRED
+      exact_urls:
+        - https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/4/query
+      terms_reviewed_at: '2026-09-01'
+      approval_expires_at: null
+      accountable_reviewer: null
+      max_requests_per_run: 0
+      max_snapshot_requests_per_run: 0
   - source_id: cape_coral_open_data_code_cases
     jurisdiction: Cape Coral, Lee County, FL
     source_name: City of Cape Coral Open Data — Code Enforcement Cases
@@ -633,6 +770,7 @@ sources:
       approval_expires_at: '2026-12-01'
       accountable_reviewer: AcreBrief public-source review
       max_requests_per_run: 2
+      max_snapshot_requests_per_run: 4
   - source_id: florida_sunbiz
     jurisdiction: Florida statewide
     source_name: Florida Division of Corporations — Sunbiz

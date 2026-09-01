@@ -8,6 +8,9 @@ Last verified: 2026-09-01. The machine-readable authority is [`data/source_regis
 | --- | --- | --- | --- | --- | --- |
 | Florida / Lee | Florida DOR Property Tax Oversight | `PUBLIC_DOWNLOAD` | `Lee 46 Preliminary NAL 2026.zip`, 43,316,780 compressed bytes, modified 2026-07-27 | current parcel ID, situs, legal, 2026 preliminary assessment and physical facts | Sandbox size/schema validation; omit owner/mailing; preliminary roll is not current tax status or an AVM |
 | Cape Coral / Lee | City Open Data Utility Lien Data | `OPEN_DATA_API` | ArcGIS `OpenData/OpenData/MapServer/6/query` | source-reported active lien status, lien date/reference/amount, STRAP | one exact record; exclude account/customer/name/address fields; historic source date is not “new today” |
+| Cape Coral / Lee | City Open Data Code Enforcement Cases | `OPEN_DATA_API` | ArcGIS layer 5 query | opened/updated/closed code and foreclosure-registration events keyed to STRAP | snapshot bootstrap emits zero new; exclude owner/mailing/free text/updater |
+| Cape Coral / Lee | City Open Data Building Permits | `OPEN_DATA_API` | ArcGIS layer 1 query | permit opened/status/finalized/expired property activity | bounded `lastchangedon` window; exclude contractor/company |
+| Cape Coral / Lee | City Open Data Payoff Data | `OPEN_DATA_API` | ArcGIS layer 2 query | watchlist-only municipal amount changes | exact validated STRAPs only; exclude `NAME`; do not call a lien or delinquency |
 | Lee | County Parcel Address + Locator REST | `OPEN_DATA_API` | official ArcGIS REST locator and parcel query | independent address→STRAP→folio resolution and property facts | exact/privacy-minimized fields only; no aerial imagery; two-request budget |
 | Lee | Property Appraiser free tax-roll downloads | `PUBLIC_DOWNLOAD` | 2026 preliminary county NAL ZIP | county-published bulk backstop | cache by revision; project property facts only; no map/aerial redistribution |
 
@@ -52,3 +55,5 @@ For the primary public demo parcel, the DOR archive produced one 2026 preliminar
 ## Operational findings
 
 The City foreclosure-registration table supplies 2026 opened/updated timestamps and stable municipal case/parcel identifiers. It supports a recent source-dated event, while `NEW SINCE LAST RUN` still requires a durable successful prior snapshot. Lee Clerk Civil Suit Case List is the next licensed milestone for the narrower `NEW_FORECLOSURE_CASE` court trigger. Broken or blocked sources remain visible as degraded and never silently substitute fixture facts.
+
+The additive Cape Coral event-stream adapter now live-verifies Code, Utility Lien, Permit, and watchlist Payoff schemas and can persist local/VM baselines. Inspections and 311 remain review-required. Production `NEW SINCE LAST RUN` remains disabled until the transactional Postgres adapter is attached and scheduled; see [`CAPE_CORAL_EVENT_STREAM.md`](CAPE_CORAL_EVENT_STREAM.md).

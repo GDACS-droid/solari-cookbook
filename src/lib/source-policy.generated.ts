@@ -10,7 +10,8 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": "2026-09-01",
     "approvalExpiresAt": null,
     "accountableReviewer": null,
-    "maxRequestsPerRun": 0
+    "maxRequestsPerRun": 0,
+    "maxSnapshotRequestsPerRun": 0
   },
   "lee_clerk_court_records": {
     "accessBasis": "REVIEW_REQUIRED",
@@ -21,7 +22,8 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": null,
     "approvalExpiresAt": null,
     "accountableReviewer": null,
-    "maxRequestsPerRun": 0
+    "maxRequestsPerRun": 0,
+    "maxSnapshotRequestsPerRun": 0
   },
   "lee_clerk_civil_suit_case_list": {
     "accessBasis": "PAID_LICENSE",
@@ -32,7 +34,8 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": "2026-09-01",
     "approvalExpiresAt": null,
     "accountableReviewer": null,
-    "maxRequestsPerRun": 0
+    "maxRequestsPerRun": 0,
+    "maxSnapshotRequestsPerRun": 0
   },
   "lee_property_appraiser": {
     "accessBasis": "REVIEW_REQUIRED",
@@ -43,7 +46,8 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": null,
     "approvalExpiresAt": null,
     "accountableReviewer": null,
-    "maxRequestsPerRun": 0
+    "maxRequestsPerRun": 0,
+    "maxSnapshotRequestsPerRun": 0
   },
   "lee_tax_collector": {
     "accessBasis": "REVIEW_REQUIRED",
@@ -54,7 +58,8 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": null,
     "approvalExpiresAt": null,
     "accountableReviewer": null,
-    "maxRequestsPerRun": 0
+    "maxRequestsPerRun": 0,
+    "maxSnapshotRequestsPerRun": 0
   },
   "florida_dor_property_tax_data": {
     "accessBasis": "PUBLIC_DOWNLOAD",
@@ -66,7 +71,8 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": "2026-09-01",
     "approvalExpiresAt": "2026-12-01",
     "accountableReviewer": "AcreBrief public-source review",
-    "maxRequestsPerRun": 4
+    "maxRequestsPerRun": 4,
+    "maxSnapshotRequestsPerRun": 4
   },
   "lee_county_parcel_open_data_api": {
     "accessBasis": "OPEN_DATA_API",
@@ -78,7 +84,8 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": "2026-09-01",
     "approvalExpiresAt": "2026-12-01",
     "accountableReviewer": "AcreBrief public-source review",
-    "maxRequestsPerRun": 2
+    "maxRequestsPerRun": 2,
+    "maxSnapshotRequestsPerRun": 2
   },
   "cape_coral_open_data_utility_liens": {
     "accessBasis": "OPEN_DATA_API",
@@ -89,7 +96,56 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": "2026-09-01",
     "approvalExpiresAt": "2026-12-01",
     "accountableReviewer": "AcreBrief public-source review",
-    "maxRequestsPerRun": 2
+    "maxRequestsPerRun": 2,
+    "maxSnapshotRequestsPerRun": 4
+  },
+  "cape_coral_open_data_building_permits": {
+    "accessBasis": "OPEN_DATA_API",
+    "automationApproval": "APPROVED",
+    "exactUrls": [
+      "https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/1/query"
+    ],
+    "termsReviewedAt": "2026-09-01",
+    "approvalExpiresAt": "2026-12-01",
+    "accountableReviewer": "AcreBrief public-source review",
+    "maxRequestsPerRun": 1,
+    "maxSnapshotRequestsPerRun": 4
+  },
+  "cape_coral_open_data_payoff": {
+    "accessBasis": "OPEN_DATA_API",
+    "automationApproval": "APPROVED",
+    "exactUrls": [
+      "https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/2/query"
+    ],
+    "termsReviewedAt": "2026-09-01",
+    "approvalExpiresAt": "2026-12-01",
+    "accountableReviewer": "AcreBrief public-source review",
+    "maxRequestsPerRun": 1,
+    "maxSnapshotRequestsPerRun": 2
+  },
+  "cape_coral_open_data_inspections": {
+    "accessBasis": "OPEN_DATA_API",
+    "automationApproval": "REVIEW_REQUIRED",
+    "exactUrls": [
+      "https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/7/query"
+    ],
+    "termsReviewedAt": "2026-09-01",
+    "approvalExpiresAt": null,
+    "accountableReviewer": null,
+    "maxRequestsPerRun": 0,
+    "maxSnapshotRequestsPerRun": 0
+  },
+  "cape_coral_open_data_311": {
+    "accessBasis": "OPEN_DATA_API",
+    "automationApproval": "REVIEW_REQUIRED",
+    "exactUrls": [
+      "https://capeims.capecoral.gov/arcgis/rest/services/OpenData/OpenData/MapServer/4/query"
+    ],
+    "termsReviewedAt": "2026-09-01",
+    "approvalExpiresAt": null,
+    "accountableReviewer": null,
+    "maxRequestsPerRun": 0,
+    "maxSnapshotRequestsPerRun": 0
   },
   "cape_coral_open_data_code_cases": {
     "accessBasis": "OPEN_DATA_API",
@@ -100,6 +156,7 @@ export const GENERATED_SOURCE_POLICY = {
     "termsReviewedAt": "2026-09-01",
     "approvalExpiresAt": "2026-12-01",
     "accountableReviewer": "AcreBrief public-source review",
-    "maxRequestsPerRun": 2
+    "maxRequestsPerRun": 2,
+    "maxSnapshotRequestsPerRun": 4
   }
 } as const
