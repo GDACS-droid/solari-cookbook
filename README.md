@@ -8,6 +8,8 @@
 
 [Watch the 72-second verified-fixture walkthrough](assets/demo/acrebrief-demo.mp4) · The live Solari version uses the same UI only after credentials and source approvals are configured.
 
+[Open the public verified-sample preview](https://acrebrief-preview.vercel.app) — no login or Solari credentials required.
+
 AcreBrief is an evidence-first, event-driven public-record property intelligence product for Southwest Florida. It watches lawful public sources for changes, resolves them to a parcel, and creates a concise investigation brief with source links, confidence, and an explainable score. It is decision support—not a claim that an owner is distressed, willing to sell, or that a title is clear.
 
 > **Competition build status:** Lee County is the vertical slice. The product has a **verified-sample** mode for a safe, reproducible public demo and an **authorized live** mode that requires a Solari key, a demo access token, and an explicit server-side source allow-list. A live run is deliberately fail-closed when a property-specific source is unavailable, unapproved, or needs review; portal reachability alone never produces a property result.
