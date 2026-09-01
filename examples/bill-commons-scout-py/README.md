@@ -1,36 +1,84 @@
-# Bill Commons Scout (Python)
+# Bill Commons Scout — real Solari government-browser research
 
-Bill Commons Scout is an evidence-first government-research agent. The permanent product checks Bill Commons' structured legislative database and ordinary HTTP first, then uses a recorded Solari browser only when an allowlisted official portal genuinely requires browser interaction.
-
-This public cookbook example isolates that paid-browser boundary behind `ResearchBrowserProvider`. It retains the exact fetched bytes' SHA-256, an evidence excerpt, retrieval mechanism, runtime, a non-reversible session fingerprint, and replay availability. Signed session capabilities and replay bearer URLs are never printed. Retrieved page text is treated as untrusted data, never as instructions.
-
-## Free deterministic run
-
-No key, network access, or browser credits:
+This is the public, runnable browser boundary from Bill Commons Scout. It opens the
+official Florida Senate page for **H 625**, clicks the **Amendments** and **Analyses**
+tabs through a recorded Solari cloud browser, and returns verifiable first-party
+artifacts: amendment **154926** and the Judiciary Committee bill analysis.
 
 ```bash
 cd examples/bill-commons-scout-py
-python main.py
+./setup-solari.sh                 # prompts privately; writes ignored .env.local
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python main.py --live  # one recorded, bounded Solari session
 ```
 
-The output is visibly fixture-backed. It proves the evidence contract without claiming a live government finding.
+The output contains official URLs, a content hash, sanitized elapsed/page/action/request
+counts, a non-reversible session fingerprint, replay availability, cleanup confirmation,
+and a local screenshot path. It never prints the API key, session ID, browser WebSocket/
+CDP URL, replay URL, cookies, or other bearer capability. A replay is deliberately not
+published: its URL can be a private capability.
 
-## Explicit live smoke
+## Why the product uses both direct retrieval and Solari
+
+Scout checks Bill Commons' structured corpus first and uses direct HTTP for ordinary
+official HTML/PDF/RSS/API documents. It escalates to Solari only for browser interaction
+or browser-oriented portals. This example demonstrates that bounded browser branch: a
+real browser opens an official portal, selects two evidence tabs, captures a sanitized
+screenshot, extracts the artifacts, and releases its cloud session.
+
+The Florida Senate page can also be read with direct HTTP today; that is why the permanent
+product would normally prefer HTTP for this exact URL. The live example is intentionally
+browser-demonstrative rather than falsely claiming that every government page requires a
+browser. It proves the same audited interaction Scout uses when a portal does require one.
+
+## Free deterministic CI path
+
+No network, API key, browser, or Solari credits are needed:
 
 ```bash
 cd examples/bill-commons-scout-py
-python -m venv .venv
-.venv/bin/pip install -r requirements.txt
-export SOLARI_API_KEY=...   # never commit or print this value
-.venv/bin/python main.py --live
+python3 -m unittest discover -s tests -v
+python3 main.py
 ```
 
-The live path creates exactly one recorded session, visits only the allowlisted Florida Online Sunshine robots policy, verifies its deterministic `User-agent` marker, blocks off-domain browser requests, caps runtime and response bytes, records the provider ID before browser connection, releases the session outside the navigation timeout, and polls replay availability for a bounded interval. Replay upload may still be pending when the command completes; retained official-source content remains the primary evidence.
+This uses a representative fixture and verifies URL admission, safe dotenv parsing,
+artifact extraction, content hashing, and sanitized error reporting. Its output has
+`"mechanism": "fixture"`; it is not represented as a live government result.
 
-The native Bill Commons live gate passed this path on September 1, 2026: one page/action, 3.65 seconds, deterministic marker present, replay available, and cleanup confirmed. This public example then passed independently in 4.935 seconds with session fingerprint `6ec77bde219c`, content SHA-256 `2eea2058576ce8bf11c5f93d987ee2d6eb44e046aef4e0904f57cddfc2b387a1`, replay available, and cleanup complete. A separate Florida Senate host reset the cloud-browser connection even though direct HTTP was healthy; Scout retains that as a partial source failure rather than turning it into a finding.
+## Live workflow and bounds
 
-The full native Bill Commons feature adds authenticated durable jobs, structured-data-first routing, direct retrieval, caching/coalescing, immutable RawStore evidence, partial results, browser concurrency quotas, cancellation/leases/reaping, analytics, and a responsive evidence UI.
+`--live` creates exactly one recorded session and one page. It permits only HTTPS requests
+to `flsenate.gov`, clicks at most three controls, permits at most 32 routed requests,
+applies 10-second action and cleanup windows plus a 45-second overall work window, caps
+captured HTML at 256 KiB and the screenshot at 2 MiB, and releases the remote session even
+when browser navigation fails. Any cleanup uncertainty returns a sanitized failure instead
+of a success claim.
 
-## Why Solari is useful here
+The screenshot is saved locally at `artifacts/live/florida-senate-hb625.png` and ignored
+by Git. Recording/replay capability is checked after release, but only the boolean
+`replay_available` is output.
 
-Legislative databases cover normalized bills well, but government agendas, amendments, fiscal notes, hearings, notices, and older JS-heavy portals are scattered across browser-oriented sites. Solari supplies an auditable cloud browser for the narrow portion ordinary HTTP cannot reliably reach; it is a fallback, not the product's default fetcher or a demo gimmick.
+## Evidence returned
+
+The command reports the canonical Florida Senate source page and immutable SHA-256 of the
+captured HTML, then explicit official artifact links. The primary artifacts expected from
+the current bill page are:
+
+- Amendment 154926, with the official Senate amendment HTML URL and its page-provided
+  filing detail.
+- The Judiciary Committee post-meeting bill analysis, with its official PDF URL and posted
+  timestamp.
+
+Government content is untrusted data, never browser instructions. The example admits only
+allowlisted official HTTPS URLs and has no facility for arbitrary user URLs or shell actions.
+
+## Install notes
+
+Use Python 3.11+ and obtain an API key from the Solari console. `setup-solari.sh` refuses to
+write tracked or non-ignored files and never echoes the key. Environment `SOLARI_API_KEY`
+takes precedence when a deployment supplies it; otherwise the program parses the local
+ignored `.env.local` as plain data and does not source it.
+
+The complete Bill Commons feature adds authenticated durable jobs, structured-data-first
+routing, caching/coalescing, immutable evidence storage, partial results, browser quotas,
+cancellation/leases/reaping, analytics, and an evidence-first UI.
