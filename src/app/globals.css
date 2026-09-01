@@ -1,6 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap");
 
-:root { --ink:#172220; --muted:#66716e; --paper:#f4f1e9; --panel:#fbfaf6; --line:#d8d8ce; --green:#16735f; --green-dark:#0d5143; --orange:#dd6a3b; --yellow:#f2b84b; --red:#b34c42; --mono:"DM Mono", monospace; --ease-out:cubic-bezier(.23,1,.32,1); }
+:root { --ink:#172220; --muted:#626d6a; --paper:#f4f1e9; --panel:#fbfaf6; --line:#d8d8ce; --green:#16735f; --green-dark:#0d5143; --orange:#ad4920; --yellow:#f2b84b; --red:#b34c42; --mono:"DM Mono", monospace; --ease-out:cubic-bezier(.23,1,.32,1); }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }
 body { margin:0; color:var(--ink); background:var(--paper); font-family:"DM Sans", Arial, sans-serif; }
