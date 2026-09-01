@@ -1,5 +1,14 @@
 # Build log
 
+## 2026-09-01 — competition and discovery package
+
+- **Source-backed search wedge:** implemented one Cape Coral property-distress monitor from the already-verified City/DOR record. It uses absolute source/observation dates, official evidence links, a property-only sample, and explicit market-coverage limitations; no illustrative counts or thin county pages were added.
+- **Technical discovery:** added canonical metadata, a two-route sitemap, internal navigation, and crawler rules that permit named search bots on public content while excluding `/api/`. Organization, Article, and BreadcrumbList JSON-LD match visible claims.
+- **Structured-data restraint:** withheld SoftwareApplication rich-result markup because AcreBrief has no final public software offer price or genuine review. This avoids converting a $750–$1,500 concierge pricing hypothesis into a fake app offer.
+- **External boundaries:** Search Console/Bing verification, IndexNow key ownership, analytics, GitHub push, deployment, public posting, and DM remain unexecuted pending explicit owner authorization. Launch copy now contains exact URLs and a native-video-first X/LinkedIn package.
+- **Verification:** 59 deterministic tests and 16 desktop Chromium/mobile WebKit checks pass; the production build prerenders the monitor, robots, and sitemap. Full-page desktop/mobile captures were inspected without overflow, and the 60.64-second demo's first frame was reconfirmed as the AcreBrief UI. The current production baseline returns HTTP 200 to all four named crawler user agents, while the three new discovery routes correctly remain 404 until an authorized deployment.
+- **Adversarial release repair:** a cold reviewer found that publishing before deployment would advertise a 404 monitor/stale public branch, new pilot links terminated at the intentionally unavailable intake, and `summary_large_image` requested an image that did not exist. Made public-route 200s plus exact public commit SHA hard post preconditions, removed the new page's pilot CTAs until a real sink exists, and switched to the truthful image-free summary card.
+
 ## 2026-09-01 — Cape Coral daily event-stream foundation
 
 - **Source expansion:** verified official ArcGIS schemas and privacy projections for Code Enforcement, Utility Liens, Building Permits, and Payoff Data. Inspections remains review-required because a stable revision identity is unproven; 311 remains review-required after an ordinary filtered query returned 403 and because it is address-only/free-text sensitive.

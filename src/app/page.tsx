@@ -232,7 +232,7 @@ export default function Home() {
     <main>
       <header className="topbar wrap">
         <a className="wordmark" href="#top" aria-label="AcreBrief home"><span>acre</span>brief<span className="wordmark-mark">.</span></a>
-        <nav aria-label="Primary navigation"><a href="#today">Today</a><a href="#operations">Operations</a><a href="#pilot">Pilot</a></nav>
+        <nav aria-label="Primary navigation"><a href="#today">Today</a><a href="/florida/cape-coral/property-distress">Research</a><a href="#operations">Operations</a><a href="#pilot">Pilot</a></nav>
         <a className="text-link" href="#pilot">Request access <Mark kind="arrow" /></a>
       </header>
 
@@ -339,7 +339,7 @@ export default function Home() {
         {pilotAvailability === "available" ? <form className="pilot-form" onSubmit={submitPilot}><label htmlFor="pilot-email">Work email</label><input id="pilot-email" name="email" type="email" autoComplete="email" required placeholder="you@company.com" /><button className="primary-button" type="submit" disabled={signup === "sending"}>{signup === "sending" ? "Sending…" : "Request pilot access"}<Mark kind="arrow" /></button>{signup === "success" && <p className="form-success" aria-live="polite">Thanks — your request is in the pilot queue.</p>}{signup === "unavailable" && <p className="form-error" aria-live="polite">The approved intake destination did not accept this request. Nothing was claimed as stored.</p>}<small>Public records only. No contact enrichment or automated outreach.</small></form> : <div className="pilot-form pilot-unavailable" role="status"><span className="tiny-label">{pilotAvailability === "checking" ? "CHECKING INTAKE" : "INTAKE NOT YET OPEN"}</span><h3>{pilotAvailability === "checking" ? "Confirming the pilot queue…" : "Pilot applications need an approved destination."}</h3><p>{pilotAvailability === "checking" ? "AcreBrief is checking whether this deployment has a real storage sink." : "No email, webhook, or database is configured, so AcreBrief will not show a form that returns an error or pretend an application was saved."}</p><small>Public records only. No contact enrichment or automated outreach.</small></div>}
       </section>
 
-      <footer className="footer wrap"><a className="wordmark" href="#top"><span>acre</span>brief<span className="wordmark-mark">.</span></a><p>Public-record property intelligence · Evidence-first by design</p><a href="#today">Back to today <Mark kind="arrow" /></a></footer>
+      <footer className="footer wrap"><a className="wordmark" href="#top"><span>acre</span>brief<span className="wordmark-mark">.</span></a><p>Public-record property intelligence · Evidence-first by design</p><a href="/florida/cape-coral/property-distress">Cape Coral monitor <Mark kind="arrow" /></a></footer>
     </main>
   );
 }

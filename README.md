@@ -6,7 +6,7 @@
 
 ![AcreBrief official-data property investigation dashboard](assets/screenshots/fresh-event/acrebrief-desktop.png)
 
-[Open the live product](https://acrebrief.com) · [Watch the 60–90 second walkthrough](assets/demo/acrebrief-demo.mp4)
+[Open the live product](https://acrebrief.com) · [Read the Cape Coral source monitor](https://acrebrief.com/florida/cape-coral/property-distress) · [Watch the 60–90 second walkthrough](assets/demo/acrebrief-demo.mp4)
 
 AcreBrief is event-driven public-record property intelligence for Southwest Florida. It monitors lawful primary sources, resolves events to parcels, preserves evidence, and explains what is known, calculated, inferred, and unavailable. It is decision support—not a title opinion, valuation, or claim that anybody wants to sell.
 

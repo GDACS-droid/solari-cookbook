@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "demo:record": "node scripts/record-demo.mjs",
+    "release:check-public": "node scripts/check-public-release.mjs",
     "source-policy:generate": "node scripts/generate-source-policy.mjs",
     "source-policy:check": "node scripts/generate-source-policy.mjs --check",
     "verify": "npm run source-policy:check && npm run lint && npm run typecheck && npm test && npm run build"
