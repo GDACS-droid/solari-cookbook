@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto"
 import {
   CAPE_CORAL_BUILDING_PERMITS,
   CAPE_CORAL_CODE_CASES,
@@ -6,7 +7,7 @@ import {
   collectCapeCoralSnapshot,
   type CapeCoralSourceDefinition,
 } from "@/lib/cape-coral-events"
-import { commitCollection, type SnapshotStore, type SnapshotTransition } from "@/lib/snapshots"
+import { commitCollection, isOperationalSnapshotStore, type SnapshotStore, type SnapshotTransition } from "@/lib/snapshots"
 
 export interface SourceRunResult {
   sourceId: string
@@ -62,13 +63,24 @@ export async function runCapeCoralEventStream(options: RunnerOptions): Promise<E
 
   const sources = await Promise.all(definitions.map(async (definition): Promise<SourceRunResult> => {
     const sourceStarted = Date.now()
-    const previous = await options.store.load(definition.sourceId)
-    const previousEnd = previous ? new Date(previous.windowEnd).getTime() : undefined
-    if (previous && previousEnd !== undefined && previousEnd >= now.getTime()) {
-      return { sourceId: definition.sourceId, status: "SKIPPED", bootstrap: false, windowStart: previous.windowStart, windowEnd: previous.windowEnd, recordsObserved: 0, recordsUnchanged: 0, transitions: [], durationMs: Date.now() - sourceStarted }
-    }
-    const windowStart = new Date(previousEnd === undefined ? now.getTime() - bootstrapMs : previousEnd - lookbackMs)
+    const runId = randomUUID()
+    const startedAt = new Date().toISOString()
+    const operationalStore = isOperationalSnapshotStore(options.store) ? options.store : undefined
+    let leaseAcquired = false
+    let previous = null as Awaited<ReturnType<SnapshotStore["load"]>>
+    let windowStart = new Date(now.getTime() - bootstrapMs)
     try {
+      if (operationalStore) {
+        leaseAcquired = await operationalStore.acquireLease(definition.sourceId, runId, 600)
+        if (!leaseAcquired) return { sourceId: definition.sourceId, status: "SKIPPED", bootstrap: false, windowStart: now.toISOString(), windowEnd: now.toISOString(), recordsObserved: 0, recordsUnchanged: 0, transitions: [], durationMs: Date.now() - sourceStarted, error: "Another run owns the source lease." }
+      }
+      previous = await options.store.load(definition.sourceId)
+      const previousEnd = previous ? new Date(previous.windowEnd).getTime() : undefined
+      if (previous && previousEnd !== undefined && previousEnd >= now.getTime()) {
+        return { sourceId: definition.sourceId, status: "SKIPPED", bootstrap: false, windowStart: previous.windowStart, windowEnd: previous.windowEnd, recordsObserved: 0, recordsUnchanged: 0, transitions: [], durationMs: Date.now() - sourceStarted }
+      }
+      windowStart = new Date(previousEnd === undefined ? now.getTime() - bootstrapMs : previousEnd - lookbackMs)
+      await operationalStore?.recordRun({ runId, sourceId: definition.sourceId, status: "RUNNING", windowStart: windowStart.toISOString(), windowEnd: now.toISOString(), startedAt })
       const collection = await collectCapeCoralSnapshot(definition, {
         windowStart,
         windowEnd: now,
@@ -78,6 +90,7 @@ export async function runCapeCoralEventStream(options: RunnerOptions): Promise<E
         signal: options.signal,
       })
       const reconciliation = await commitCollection(options.store, collection, definition.classify)
+      await operationalStore?.recordRun({ runId, sourceId: definition.sourceId, status: "SUCCEEDED", windowStart: collection.windowStart, windowEnd: collection.windowEnd, startedAt, completedAt: new Date().toISOString(), schemaFingerprint: collection.schemaFingerprint, recordsObserved: collection.records.length, transitionsEmitted: reconciliation.transitions.length })
       return {
         sourceId: definition.sourceId,
         status: "SUCCEEDED",
@@ -90,6 +103,10 @@ export async function runCapeCoralEventStream(options: RunnerOptions): Promise<E
         durationMs: Date.now() - sourceStarted,
       }
     } catch (error) {
+      const errorMessage = safeError(error)
+      try {
+        await operationalStore?.recordRun({ runId, sourceId: definition.sourceId, status: "FAILED", windowStart: windowStart.toISOString(), windowEnd: now.toISOString(), startedAt, completedAt: new Date().toISOString(), recordsObserved: 0, transitionsEmitted: 0, errorCode: "SOURCE_RUN_FAILED", errorMessage })
+      } catch { /* Snapshot state remains authoritative if audit persistence fails. */ }
       return {
         sourceId: definition.sourceId,
         status: "FAILED",
@@ -100,7 +117,11 @@ export async function runCapeCoralEventStream(options: RunnerOptions): Promise<E
         recordsUnchanged: 0,
         transitions: [],
         durationMs: Date.now() - sourceStarted,
-        error: safeError(error),
+        error: errorMessage,
+      }
+    } finally {
+      if (operationalStore && leaseAcquired) {
+        try { await operationalStore.releaseLease(definition.sourceId, runId) } catch { /* Lease expiry recovers a failed release. */ }
       }
     }
   }))

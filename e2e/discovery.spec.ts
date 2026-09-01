@@ -14,7 +14,7 @@ test("publishes a source-backed Cape Coral monitor without a continuously-live c
   await expect(page.getByRole("link", { name: /Florida DOR Property Tax Data Portal/ })).toHaveAttribute("href", /floridarevenue\.com/);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://acrebrief.com/florida/cape-coral/property-distress");
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute("content", "summary");
-  await expect(page.getByRole("link", { name: /founding pilot|discuss a founding pilot/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /discuss a founding pilot/i })).toHaveAttribute("href", "/#pilot");
 });
 
 test("renders honest article and breadcrumb structured data", async ({ page }) => {

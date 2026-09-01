@@ -135,7 +135,7 @@ export default function CapeCoralPropertyDistressPage() {
 
         <section className="intel-cta wrap" aria-labelledby="cta-heading">
           <div><span className="tiny-label">FROM MARKET SIGNAL TO EVIDENCE-BACKED BRIEF</span><h2 id="cta-heading">See the source checks run.</h2><p>The live AcreBrief demo uses Solari Browser and Sandbox to verify, retrieve, parse, join, and explain approved official data for the selected property.</p></div>
-          <div><Link className="primary-button" href="/#investigate">Investigate the property <span aria-hidden="true">↗</span></Link></div>
+          <div><Link className="primary-button" href="/#investigate">Investigate the property <span aria-hidden="true">↗</span></Link><Link className="text-link" href="/#pilot">Discuss a founding pilot <span aria-hidden="true">↗</span></Link></div>
         </section>
       </article>
 

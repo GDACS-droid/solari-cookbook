@@ -20,14 +20,17 @@
     "release:check-public": "node scripts/check-public-release.mjs",
     "source-policy:generate": "node scripts/generate-source-policy.mjs",
     "source-policy:check": "node scripts/generate-source-policy.mjs --check",
+    "db:migrate": "node scripts/migrate-database.mjs",
     "verify": "npm run source-policy:check && npm run lint && npm run typecheck && npm test && npm run build"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@solarisdk/browser": "0.1.2",
     "@solarisdk/sdk": "0.1.2",
     "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "ws": "^8.21.3",
     "zod": "4.5.4"
   },
   "devDependencies": {
@@ -37,6 +40,7 @@
     "@types/node": "24.3.0",
     "@types/react": "19.1.12",
     "@types/react-dom": "19.1.9",
+    "@types/ws": "^8.18.1",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.3.4",
     "jsdom": "29.1.1",

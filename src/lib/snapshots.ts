@@ -80,8 +80,8 @@ export function fingerprintSnapshotState(state: SnapshotState): string {
   return createHash("sha256").update(canonicalize(state)).digest("hex")
 }
 
-function transitionId(sourceId: string, nativeRecordKey: string, eventType: EventType, beforeFingerprint: string | undefined, afterFingerprint: string): string {
-  return `transition_${createHash("sha256").update([sourceId, nativeRecordKey, eventType, beforeFingerprint ?? "bootstrap", afterFingerprint].join("|")).digest("hex").slice(0, 24)}`
+function transitionId(sourceId: string, nativeRecordKey: string, eventType: EventType, eventDate: string, beforeFingerprint: string | undefined, afterFingerprint: string): string {
+  return `transition_${createHash("sha256").update([sourceId, nativeRecordKey, eventType, eventDate, beforeFingerprint ?? "bootstrap", afterFingerprint].join("|")).digest("hex").slice(0, 24)}`
 }
 
 function validateCollection(collection: SnapshotCollection): void {
@@ -139,7 +139,7 @@ export function reconcileSnapshot(previous: SourceSnapshot | null, collection: S
     if (bootstrap) continue
     for (const classified of classify(prior, current, { collectedAt: collection.collectedAt, windowStart: collection.windowStart, windowEnd: collection.windowEnd })) {
       transitions.push({
-        transitionId: transitionId(collection.sourceId, input.nativeRecordKey, classified.eventType, prior?.stateFingerprint, stateFingerprint),
+        transitionId: transitionId(collection.sourceId, input.nativeRecordKey, classified.eventType, classified.eventDate, prior?.stateFingerprint, stateFingerprint),
         sourceId: collection.sourceId,
         nativeRecordKey: input.nativeRecordKey,
         parcelId: input.parcelId,
@@ -178,6 +178,32 @@ export function reconcileSnapshot(previous: SourceSnapshot | null, collection: S
 export interface SnapshotStore {
   load(sourceId: string): Promise<SourceSnapshot | null>
   commit(sourceId: string, expectedGeneration: number, next: SourceSnapshot, transitions: SnapshotTransition[]): Promise<void>
+}
+
+export interface SourceRunAudit {
+  runId: string
+  sourceId: string
+  status: "RUNNING" | "SUCCEEDED" | "FAILED"
+  windowStart: string
+  windowEnd: string
+  startedAt: string
+  completedAt?: string
+  schemaFingerprint?: string
+  recordsObserved?: number
+  transitionsEmitted?: number
+  errorCode?: string
+  errorMessage?: string
+}
+
+export interface OperationalSnapshotStore extends SnapshotStore {
+  acquireLease(sourceId: string, owner: string, ttlSeconds: number): Promise<boolean>
+  releaseLease(sourceId: string, owner: string): Promise<void>
+  recordRun(run: SourceRunAudit): Promise<void>
+}
+
+export function isOperationalSnapshotStore(store: SnapshotStore): store is OperationalSnapshotStore {
+  const candidate = store as Partial<OperationalSnapshotStore>
+  return typeof candidate.acquireLease === "function" && typeof candidate.releaseLease === "function" && typeof candidate.recordRun === "function"
 }
 
 export class InMemorySnapshotStore implements SnapshotStore {

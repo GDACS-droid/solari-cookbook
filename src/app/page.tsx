@@ -37,6 +37,16 @@ type StreamPayload = Partial<InvestigationStep> & {
   };
 };
 
+type OperationsSource = {
+  sourceId: string;
+  status: "RUNNING" | "SUCCEEDED" | "FAILED";
+  checkedAt: string;
+  recordsObserved: number;
+  transitionsEmitted: number;
+  durationMs: number | null;
+  generation: number | null;
+};
+
 const property = {
   address: "1447 SE 17th Ter, Cape Coral, FL 33990",
   shortAddress: "1447 SE 17th Ter",
@@ -57,14 +67,16 @@ const liveSteps: InvestigationStep[] = [
   { id: "normalization", source: "Exact parcel join + evidence manifest", surface: "Sandbox", status: "pending", detail: "Validate STRAP join, provenance, and transparent score" },
 ];
 
-const sourceHealth = [
-  ["Florida DOR 2026 Lee roll", "Sep 1", "LIVE_READY", "0 new · 1 parcel"],
-  ["Cape Coral Foreclosure Registration", "Sep 1", "LIVE_READY", "5 source-dated Aug 31"],
-  ["Cape Coral Utility Lien Open Data", "Sep 1", "LIVE_READY", "0 new · 1 active"],
-  ["Lee parcel ArcGIS API", "Sep 1", "LIVE_READY", "0 new"],
-  ["Lee Clerk Matrix", "Not run", "Gated", "—"],
-  ["Lee Tax Collector", "Not run", "Research", "—"],
-];
+const sourceLabels: Record<string, string> = {
+  cape_coral_open_data_code_cases: "Cape Coral Code Enforcement",
+  cape_coral_open_data_utility_liens: "Cape Coral Utility Liens",
+  cape_coral_open_data_building_permits: "Cape Coral Building Permits",
+};
+
+function checkedAt(value: string): string {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }).format(date) : "Unknown";
+}
 
 function Mark({ kind = "check" }: { kind?: "check" | "warn" | "arrow" | "dot" }) {
   return <span aria-hidden="true" className={`mark mark-${kind}`}>{kind === "check" ? "✓" : kind === "warn" ? "!" : kind === "arrow" ? "↗" : "•"}</span>;
@@ -87,15 +99,21 @@ export default function Home() {
   const [runResult, setRunResult] = useState<(Pick<StreamPayload, "graph" | "score" | "clearlyLabeledReplay"> & { reviewRequired?: boolean }) | undefined>();
   const [signup, setSignup] = useState<"idle" | "sending" | "success" | "unavailable">("idle");
   const [pilotAvailability, setPilotAvailability] = useState<"checking" | "available" | "unavailable">("checking");
+  const [operations, setOperations] = useState<OperationsSource[]>([]);
+  const [operationsAvailable, setOperationsAvailable] = useState<boolean | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const liveInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/pilot-signup", { cache: "no-store", signal: controller.signal })
+    fetch("/api/pilot-signup", { signal: controller.signal })
       .then((response) => response.ok ? response.json() as Promise<{ configured?: boolean }> : Promise.reject())
       .then((value) => setPilotAvailability(value.configured ? "available" : "unavailable"))
       .catch(() => { if (!controller.signal.aborted) setPilotAvailability("unavailable"); });
+    fetch("/api/operations", { signal: controller.signal })
+      .then((response) => response.ok ? response.json() as Promise<{ configured?: boolean; sources?: OperationsSource[] }> : Promise.reject())
+      .then((value) => { setOperations(value.sources ?? []); setOperationsAvailable(Boolean(value.configured)); })
+      .catch(() => { if (!controller.signal.aborted) setOperationsAvailable(false); });
     return () => { controller.abort(); abortRef.current?.abort(); };
   }, []);
 
@@ -214,7 +232,7 @@ export default function Home() {
     const data = new FormData(event.currentTarget);
     setSignup("sending");
     try {
-      const response = await fetch("/api/pilot-signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: data.get("email") }) });
+      const response = await fetch("/api/pilot-signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: data.get("email"), consent: data.get("consent") === "on", website: data.get("website") }) });
       setSignup(response.ok ? "success" : "unavailable");
     } catch {
       setSignup("unavailable");
@@ -330,13 +348,14 @@ export default function Home() {
         <div className="section-heading"><div><span className="tiny-label">OPERATIONS</span><h2 id="operations-heading">Source readiness, at a glance</h2></div><p className="sample-note">Only affirmative public-download/open-data sources can be LIVE_READY.</p></div>
         <div className="operations-table" role="table" aria-label="Source health">
           <div className="operations-row header" role="row"><span role="columnheader">Source</span><span role="columnheader">Last check</span><span role="columnheader">Status</span><span role="columnheader">Observed result</span></div>
-          {sourceHealth.map(([source, check, health, events]) => <div className="operations-row" role="row" key={source}><span role="cell"><span className="mobile-field-label">Source</span><strong>{source}</strong></span><span role="cell"><span className="mobile-field-label">Checked</span><span>{check}</span></span><span role="cell"><span className="mobile-field-label">Status</span><span className={`health ${health === "LIVE_READY" ? "healthy" : "degraded"}`}><Mark kind={health === "LIVE_READY" ? "check" : "warn"} />{health}</span></span><span role="cell"><span className="mobile-field-label">Result</span><span>{events}</span></span></div>)}
+          {operations.map((source) => <div className="operations-row" role="row" key={source.sourceId}><span role="cell"><span className="mobile-field-label">Source</span><strong>{sourceLabels[source.sourceId] ?? source.sourceId}</strong></span><span role="cell"><span className="mobile-field-label">Checked</span><span>{checkedAt(source.checkedAt)}</span></span><span role="cell"><span className="mobile-field-label">Status</span><span className={`health ${source.status === "SUCCEEDED" ? "healthy" : "degraded"}`}><Mark kind={source.status === "SUCCEEDED" ? "check" : "warn"} />{source.status === "SUCCEEDED" ? "LIVE_READY" : source.status}</span></span><span role="cell"><span className="mobile-field-label">Result</span><span>{source.transitionsEmitted} changed · {source.recordsObserved} observed</span></span></div>)}
+          {operations.length === 0 && <div className="operations-empty" role="row"><span role="cell">{operationsAvailable === null ? "Loading durable source status…" : operationsAvailable ? "Durable state is ready; the first scheduled source run has not completed yet." : "Durable source status is temporarily unavailable."}</span></div>}
         </div>
       </section>
 
       <section id="pilot" className="pilot wrap" aria-labelledby="pilot-heading">
         <div><span className="tiny-label">EARLY ACCESS</span><h2 id="pilot-heading">Stop opening five county websites for one property.</h2><p>AcreBrief is built for acquisition teams that need a defensible first look at newly changed property distress. Pilot plans are being shaped with working teams, not invented benchmarks.</p><div className="pricing"><span>Founding concierge pilot</span><strong>$750–$1,500<span>/month</span></strong><p>AcreBrief works your real buy box and delivers source-backed investigations. Final pricing follows paid pilot discovery.</p></div></div>
-        {pilotAvailability === "available" ? <form className="pilot-form" onSubmit={submitPilot}><label htmlFor="pilot-email">Work email</label><input id="pilot-email" name="email" type="email" autoComplete="email" required placeholder="you@company.com" /><button className="primary-button" type="submit" disabled={signup === "sending"}>{signup === "sending" ? "Sending…" : "Request pilot access"}<Mark kind="arrow" /></button>{signup === "success" && <p className="form-success" aria-live="polite">Thanks — your request is in the pilot queue.</p>}{signup === "unavailable" && <p className="form-error" aria-live="polite">The approved intake destination did not accept this request. Nothing was claimed as stored.</p>}<small>Public records only. No contact enrichment or automated outreach.</small></form> : <div className="pilot-form pilot-unavailable" role="status"><span className="tiny-label">{pilotAvailability === "checking" ? "CHECKING INTAKE" : "INTAKE NOT YET OPEN"}</span><h3>{pilotAvailability === "checking" ? "Confirming the pilot queue…" : "Pilot applications need an approved destination."}</h3><p>{pilotAvailability === "checking" ? "AcreBrief is checking whether this deployment has a real storage sink." : "No email, webhook, or database is configured, so AcreBrief will not show a form that returns an error or pretend an application was saved."}</p><small>Public records only. No contact enrichment or automated outreach.</small></div>}
+        {pilotAvailability === "available" ? <form className="pilot-form" onSubmit={submitPilot}><label htmlFor="pilot-email">Work email</label><input id="pilot-email" name="email" type="email" autoComplete="email" required placeholder="you@company.com" /><input className="pilot-honeypot" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" /><label className="pilot-consent"><input name="consent" type="checkbox" required /> <span>AcreBrief may email me about the founding pilot.</span></label><button className="primary-button" type="submit" disabled={signup === "sending"}>{signup === "sending" ? "Sending…" : "Request pilot access"}<Mark kind="arrow" /></button>{signup === "success" && <p className="form-success" aria-live="polite">Thanks — your request is stored in the pilot queue.</p>}{signup === "unavailable" && <p className="form-error" aria-live="polite">The approved intake database did not accept this request. Nothing was claimed as stored.</p>}<small>Public records only. No contact enrichment or automated outreach.</small></form> : <div className="pilot-form pilot-unavailable" role="status"><span className="tiny-label">{pilotAvailability === "checking" ? "CHECKING INTAKE" : "INTAKE NOT YET OPEN"}</span><h3>{pilotAvailability === "checking" ? "Confirming the pilot queue…" : "Pilot applications need an approved destination."}</h3><p>{pilotAvailability === "checking" ? "AcreBrief is checking whether this deployment has a real storage sink." : "The durable intake database is unavailable, so AcreBrief will not show a form that returns an error or pretend an application was saved."}</p><small>Public records only. No contact enrichment or automated outreach.</small></div>}
       </section>
 
       <footer className="footer wrap"><a className="wordmark" href="#top"><span>acre</span>brief<span className="wordmark-mark">.</span></a><p>Public-record property intelligence · Evidence-first by design</p><a href="/florida/cape-coral/property-distress">Cape Coral monitor <Mark kind="arrow" /></a></footer>

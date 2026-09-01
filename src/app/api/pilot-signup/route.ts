@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { persistPilotSubmission, pilotIntakeReady } from "@/lib/pilot-intake"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -7,63 +8,47 @@ const pilotSignup = z.object({
   email: z.string().trim().email().max(254),
   company: z.string().trim().max(120).optional(),
   workflow: z.string().trim().max(500).optional(),
+  consent: z.literal(true),
   // Honeypot. A legitimate UI leaves this empty.
   website: z.string().max(0).optional().default(""),
 }).strict()
 
-function configuredEndpoint(): URL | undefined {
-  const raw = process.env.PILOT_SIGNUP_WEBHOOK_URL
-  if (!raw) return undefined
-  const url = new URL(raw)
-  if (url.protocol !== "https:") throw new Error("Pilot webhook must use HTTPS")
-  return url
+function noStore(status = 200) {
+  return { status, headers: { "Cache-Control": "no-store" } }
 }
 
-/** Readiness only. Never expose the configured destination to the browser. */
-export function GET(): Response {
-  try {
-    return Response.json({ configured: Boolean(configuredEndpoint()) }, { headers: { "Cache-Control": "no-store" } })
-  } catch {
-    return Response.json({ configured: false }, { headers: { "Cache-Control": "no-store" } })
-  }
+export async function GET(): Promise<Response> {
+  return Response.json({ configured: await pilotIntakeReady() }, { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } })
 }
 
-/**
- * Privacy-minimal pilot intake. The deployment owner supplies the server-only
- * webhook; the URL and its response are never exposed to the browser.
- */
 export async function POST(request: Request): Promise<Response> {
+  const contentLength = Number(request.headers.get("content-length") ?? 0)
+  if (contentLength > 4_096) return Response.json({ error: "Request is too large." }, noStore(413))
+  const origin = request.headers.get("origin")
+  if (origin && origin !== new URL(request.url).origin) return Response.json({ error: "Origin not allowed." }, noStore(403))
+
   let body: unknown
-  try { body = await request.json() } catch { return Response.json({ error: "Invalid JSON body" }, { status: 400 }) }
-  const parsed = pilotSignup.safeParse(body)
-  if (!parsed.success) return Response.json({ error: "Enter a valid work email and keep fields within their limits." }, { status: 400 })
-
-  let endpoint: URL | undefined
-  try { endpoint = configuredEndpoint() } catch { return Response.json({ error: "Pilot signup is not configured safely." }, { status: 503 }) }
-  if (!endpoint) return Response.json({ error: "Pilot signup is not configured on this deployment." }, { status: 503 })
-
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 5_000)
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({
-        email: parsed.data.email,
-        company: parsed.data.company || undefined,
-        workflow: parsed.data.workflow || undefined,
-        source: "acrebrief-pilot",
-        submittedAt: new Date().toISOString(),
-      }),
-      cache: "no-store",
-      redirect: "error",
-      signal: controller.signal,
+    const raw = await request.text()
+    if (Buffer.byteLength(raw, "utf8") > 4_096) return Response.json({ error: "Request is too large." }, noStore(413))
+    body = JSON.parse(raw)
+  } catch { return Response.json({ error: "Invalid JSON body" }, noStore(400)) }
+  const parsed = pilotSignup.safeParse(body)
+  if (!parsed.success) return Response.json({ error: "Enter a valid work email and confirm follow-up consent." }, noStore(400))
+  if (!await pilotIntakeReady()) return Response.json({ error: "Pilot signup is not configured on this deployment." }, noStore(503))
+
+  const forwarded = request.headers.get("x-vercel-forwarded-for") ?? request.headers.get("x-forwarded-for") ?? "unknown"
+  const clientIdentifier = `${forwarded.split(",")[0]?.trim() || "unknown"}|${request.headers.get("user-agent") ?? "unknown"}`
+  try {
+    const result = await persistPilotSubmission({
+      email: parsed.data.email,
+      company: parsed.data.company || undefined,
+      workflow: parsed.data.workflow || undefined,
+      rateIdentifier: clientIdentifier,
     })
-    if (!response.ok) return Response.json({ error: "Pilot signup could not be saved." }, { status: 502 })
-    return Response.json({ accepted: true }, { status: 202 })
+    if (result === "rate_limited") return Response.json({ error: "Too many requests. Try again later." }, { status: 429, headers: { "Cache-Control": "no-store", "Retry-After": "900" } })
+    return Response.json({ accepted: true }, noStore(202))
   } catch {
-    return Response.json({ error: "Pilot signup could not be saved." }, { status: 502 })
-  } finally {
-    clearTimeout(timeout)
+    return Response.json({ error: "Pilot signup could not be saved." }, noStore(502))
   }
 }

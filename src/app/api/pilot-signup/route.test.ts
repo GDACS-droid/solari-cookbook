@@ -1,35 +1,55 @@
-import { afterEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+vi.mock("@/lib/pilot-intake", () => ({
+  pilotIntakeReady: vi.fn(),
+  persistPilotSubmission: vi.fn(),
+}))
+
 import { GET, POST } from "@/app/api/pilot-signup/route"
+import { persistPilotSubmission, pilotIntakeReady } from "@/lib/pilot-intake"
 
-const previousEndpoint = process.env.PILOT_SIGNUP_WEBHOOK_URL
+const ready = vi.mocked(pilotIntakeReady)
+const persist = vi.mocked(persistPilotSubmission)
 
-afterEach(() => {
-  if (previousEndpoint) process.env.PILOT_SIGNUP_WEBHOOK_URL = previousEndpoint
-  else delete process.env.PILOT_SIGNUP_WEBHOOK_URL
+beforeEach(() => {
+  ready.mockReset().mockResolvedValue(true)
+  persist.mockReset().mockResolvedValue("accepted")
 })
 
 describe("pilot signup endpoint", () => {
-  it("reports readiness without exposing an endpoint", async () => {
-    delete process.env.PILOT_SIGNUP_WEBHOOK_URL
-    expect(await GET().json()).toEqual({ configured: false })
-    process.env.PILOT_SIGNUP_WEBHOOK_URL = "https://forms.example.test/intake"
-    expect(await GET().json()).toEqual({ configured: true })
-    expect(JSON.stringify(await GET().json())).not.toContain("forms.example.test")
-  })
-  it("does not pretend an unconfigured signup was stored", async () => {
-    delete process.env.PILOT_SIGNUP_WEBHOOK_URL
-    const response = await POST(new Request("http://localhost/api/pilot-signup", {
-      method: "POST",
-      body: JSON.stringify({ email: "analyst@example.com" }),
-    }))
-    expect(response.status).toBe(503)
+  it("reports database-backed readiness without exposing a destination", async () => {
+    expect(await GET().then((response) => response.json())).toEqual({ configured: true })
+    ready.mockResolvedValue(false)
+    expect(await GET().then((response) => response.json())).toEqual({ configured: false })
   })
 
-  it("rejects malformed or over-broad input", async () => {
+  it("persists a consented submission and preserves the response contract", async () => {
     const response = await POST(new Request("http://localhost/api/pilot-signup", {
       method: "POST",
-      body: JSON.stringify({ email: "not-an-email", admin: true }),
+      headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.10", "user-agent": "test" },
+      body: JSON.stringify({ email: "analyst@example.com", consent: true, website: "" }),
     }))
-    expect(response.status).toBe(400)
+    expect(response.status).toBe(202)
+    expect(await response.json()).toEqual({ accepted: true })
+    expect(persist).toHaveBeenCalledWith(expect.objectContaining({ email: "analyst@example.com", rateIdentifier: "192.0.2.10|test" }))
+  })
+
+  it("rejects missing consent, malformed, cross-origin, and oversized input", async () => {
+    const base = { method: "POST", headers: { "content-type": "application/json" } }
+    expect((await POST(new Request("http://localhost/api/pilot-signup", { ...base, body: JSON.stringify({ email: "analyst@example.com" }) }))).status).toBe(400)
+    expect((await POST(new Request("http://localhost/api/pilot-signup", { ...base, body: JSON.stringify({ email: "not-email", consent: true, admin: true }) }))).status).toBe(400)
+    expect((await POST(new Request("http://localhost/api/pilot-signup", { ...base, headers: { ...base.headers, origin: "https://evil.example" }, body: JSON.stringify({ email: "analyst@example.com", consent: true }) }))).status).toBe(403)
+    expect((await POST(new Request("http://localhost/api/pilot-signup", { ...base, headers: { ...base.headers, "content-length": "5000" }, body: "{}" }))).status).toBe(413)
+  })
+
+  it("fails closed when unavailable and exposes a generic rate limit", async () => {
+    ready.mockResolvedValue(false)
+    const body = JSON.stringify({ email: "analyst@example.com", consent: true })
+    expect((await POST(new Request("http://localhost/api/pilot-signup", { method: "POST", body }))).status).toBe(503)
+    ready.mockResolvedValue(true)
+    persist.mockResolvedValue("rate_limited")
+    const limited = await POST(new Request("http://localhost/api/pilot-signup", { method: "POST", body }))
+    expect(limited.status).toBe(429)
+    expect(limited.headers.get("retry-after")).toBe("900")
   })
 })

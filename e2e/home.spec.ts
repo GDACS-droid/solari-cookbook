@@ -60,3 +60,16 @@ test("labels an actual live terminal result as verified without claiming the eve
   await expect(page.getByLabel("Investigation result")).toContainText("LIVE VERIFIED RESULT");
   await expect(page.getByLabel("Investigation result")).not.toContainText("FRESH LIVE RESULT");
 });
+
+test("collects explicit consent before accepting a pilot request", async ({ page }) => {
+  await page.route("**/api/pilot-signup", async (route) => {
+    if (route.request().method() === "GET") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: true }) });
+    expect(route.request().postDataJSON()).toMatchObject({ email: "pilot@example.com", consent: true, website: "" });
+    return route.fulfill({ status: 202, contentType: "application/json", body: JSON.stringify({ accepted: true }) });
+  });
+  await page.goto("/");
+  await page.getByLabel("Work email").fill("pilot@example.com");
+  await page.getByRole("checkbox", { name: /may email me about the founding pilot/i }).check();
+  await page.getByRole("button", { name: /request pilot access/i }).click();
+  await expect(page.getByText("Thanks — your request is stored in the pilot queue.")).toBeVisible();
+});

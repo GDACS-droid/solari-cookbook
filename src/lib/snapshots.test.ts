@@ -39,6 +39,21 @@ describe("durable snapshot reconciliation", () => {
     expect(store.transitions).toHaveLength(1)
   })
 
+  it("preserves repeated state edges as distinct source-dated events", async () => {
+    const store = new InMemorySnapshotStore()
+    await commitCollection(store, collection("2026-09-01T00:00:00.000Z", "2026-09-02T00:00:00.000Z"), classifier)
+    const closedFirst = { ...record("Closed"), sourceUpdatedAt: "2026-09-02T12:00:00.000Z" }
+    const openAgain = { ...record("Open"), sourceUpdatedAt: "2026-09-03T12:00:00.000Z" }
+    const closedAgain = { ...record("Closed"), sourceUpdatedAt: "2026-09-04T12:00:00.000Z" }
+    const first = await commitCollection(store, collection("2026-09-02T00:00:00.000Z", "2026-09-03T00:00:00.000Z", [closedFirst]), classifier)
+    await commitCollection(store, collection("2026-09-03T00:00:00.000Z", "2026-09-04T00:00:00.000Z", [openAgain]), classifier)
+    const repeated = await commitCollection(store, collection("2026-09-04T00:00:00.000Z", "2026-09-05T00:00:00.000Z", [closedAgain]), classifier)
+    expect(first.transitions[0]?.eventType).toBe("CODE_CASE_CLOSED")
+    expect(repeated.transitions[0]?.eventType).toBe("CODE_CASE_CLOSED")
+    expect(repeated.transitions[0]?.transitionId).not.toBe(first.transitions[0]?.transitionId)
+    expect(store.transitions).toHaveLength(3)
+  })
+
   it("preserves prior rows omitted from a delta window and never infers deletion", async () => {
     const first = reconcileSnapshot(null, collection("2026-09-01T00:00:00.000Z", "2026-09-02T00:00:00.000Z"), classifier)
     const second = reconcileSnapshot(first.next, collection("2026-09-02T00:00:00.000Z", "2026-09-03T00:00:00.000Z", []), classifier)
